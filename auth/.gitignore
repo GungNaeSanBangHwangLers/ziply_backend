@@ -1,0 +1,68 @@
+### Build output ###
+build/
+**/build/
+**/out/
+
+### Gradle ###
+.gradle/
+!gradle/wrapper/gradle-wrapper.jar
+
+### Environment variables ###
+.env
+
+### Logs ###
+logs/
+*.log
+*.log.*
+
+### Spring Boot YAML (민감정보 보호) ###
+# 모든 모듈의 실제 설정 파일 무시
+**/src/main/resources/application.yml
+**/src/main/resources/application-*.yml
+
+# 예제 파일은 커밋 허용
+!**/src/main/resources/application-example.yml
+
+# Docker Compose 민감정보 포함 가능
+**/docker-compose.yml
+
+### IDE ###
+# IntelliJ
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Eclipse / STS
+.classpath
+.project
+.settings/
+.apt_generated
+.factorypath
+.springBeans
+.sts4-cache
+bin/
+**/bin/
+
+# VS Code
+.vscode/
+
+### NetBeans ###
+nbproject/private/
+nbbuild/
+dist/
+nbdist/
+.nb-gradle/
+
+### OS files ###
+.DS_Store
+Thumbs.db
+
+### Docker ###
+docker-data/
+docker-volume/
+*.pid
+
+### Tests ###
+*.test.js
+test-output/
