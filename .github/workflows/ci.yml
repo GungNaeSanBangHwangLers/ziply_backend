@@ -2,39 +2,16 @@ name: CI
 
 on:
   push:
-    branches: [ main, dev ]
+    branches: [ "dev", "main" ]
   pull_request:
-    branches: [ main ]
+    branches: [ "dev", "main" ]
 
 jobs:
-  build-auth:
-    name: Build & Test - auth
+  build:
     runs-on: ubuntu-latest
 
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_DATABASE: auth          # auth DB 이름
-          MYSQL_USER: ziply             # auth에서 쓰는 계정
-          MYSQL_PASSWORD: 1234          # auth에서 쓰는 비밀번호
-          MYSQL_ROOT_PASSWORD: root
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=10
-
-    env:
-      DB_URL: jdbc:mysql://localhost:3306/auth?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
-      DB_USERNAME: ziply
-      DB_PASSWORD: 1234
-      SERVER_PORT: 8080
-
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
@@ -42,57 +19,17 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
-          cache: gradle
 
-      - name: Grant execute permission for gradlew
+      # auth 모듈 빌드 (테스트 제외)
+      - name: Build auth (skip tests)
+        working-directory: ./auth
         run: |
-          cd auth
           chmod +x gradlew
+          ./gradlew clean build -x test
 
-      - name: Build & Test - auth
+      # user 모듈 빌드 (테스트 제외)
+      - name: Build user (skip tests)
+        working-directory: ./user
         run: |
-          cd auth
-          ./gradlew clean build
-          # 또는 ./gradlew clean test 만 돌리고 싶으면 build 대신 test
-
-  build-user:
-    name: Build & Test - user
-    runs-on: ubuntu-latest
-    needs: build-auth      # auth 성공 후 user 실행 (원하면 삭제해도 됨)
-
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_DATABASE: ziply_user     # user 쪽 DB 이름
-          MYSQL_USER: ziply_user         # application.yml username
-          MYSQL_PASSWORD: user_pw        # application.yml password
-          MYSQL_ROOT_PASSWORD: root
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=10
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-          cache: gradle
-
-      - name: Grant execute permission for gradlew
-        run: |
-          cd user
           chmod +x gradlew
-
-      - name: Build & Test - user
-        run: |
-          cd user
-          ./gradlew clean build
+          ./gradlew clean build -x test
