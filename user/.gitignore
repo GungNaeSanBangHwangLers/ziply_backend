@@ -9,7 +9,7 @@ build/
 
 ### Environment variables ###
 .env
-
+init.sql
 ### Logs ###
 logs/
 *.log

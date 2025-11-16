@@ -2,8 +2,13 @@ package ziply.user.domain.user;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Entity
+@Getter
+@NoArgsConstructor
 @Table(name = "users")
 public class User {
 
@@ -36,9 +41,9 @@ public class User {
         this.updatedAt = LocalDateTime.now();
     }
 
-
-    public User() {
-
+    public void updateName(String name) {
+        this.name = name;
+        this.updatedAt = LocalDateTime.now();
     }
 
     @PreUpdate
