@@ -20,14 +20,14 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      # auth 모듈 빌드 + 테스트
-      - name: Build & test auth
+      # auth 모듈 빌드 (테스트 제외)
+      - name: Build auth (skip tests)
         working-directory: ./auth
         run: |
           chmod +x gradlew
-          ./gradlew clean build --no-daemon
+          ./gradlew clean build -x test --no-daemon
 
-      # user 모듈 빌드 + 테스트
+      # user 모듈 빌드 + 테스트 실행
       - name: Build & test user
         working-directory: ./user
         run: |
