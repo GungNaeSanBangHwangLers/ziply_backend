@@ -25,11 +25,11 @@ jobs:
         working-directory: ./auth
         run: |
           chmod +x gradlew
-          ./gradlew clean build -x test
+          ./gradlew clean build -x test --no-daemon
 
-      # user 모듈 빌드 (테스트 제외)
-      - name: Build user (skip tests)
+      # user 모듈 빌드 + 테스트 실행
+      - name: Build & test user
         working-directory: ./user
         run: |
           chmod +x gradlew
-          ./gradlew clean build -x test
+          ./gradlew clean build --no-daemon
