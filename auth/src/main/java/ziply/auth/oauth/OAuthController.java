@@ -1,11 +1,17 @@
 package ziply.auth.oauth;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.parameters.RequestBody;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import ziply.auth.oauth.dto.request.GoogleLoginRequest;
 import ziply.auth.oauth.dto.response.TokenResponse;
 
 @RestController
@@ -13,20 +19,22 @@ import ziply.auth.oauth.dto.response.TokenResponse;
 @RequiredArgsConstructor
 @Slf4j
 public class OAuthController {
+
     private final GoogleOAuthService googleOAuthService;
 
-    @GetMapping("/google")
-    public void getGoogleLoginUrl(HttpServletResponse response) throws IOException {
-        String url = googleOAuthService.getLoginUrl();
-        log.info("Redirecting to Google OAuth: {}", url);
-        response.sendRedirect(url);
-    }
-
-    @GetMapping("/google/callback")
-    public ResponseEntity<TokenResponse> googleCallback(
-            @RequestParam("code") String code
+    // [모바일] 구글 ID 토큰 로그인
+    @Operation(summary = "모바일 구글 로그인", description = "안드로이드에서 Google Sign-In SDK로 로그인 후 획득한 ID 토큰을 전달하면서버에서 검증 후 JWT를 발급합니다.")
+    @ApiResponse(responseCode = "200", description = "JWT 토큰 발급 완료", content = @Content(schema = @Schema(implementation = TokenResponse.class)))
+    @PostMapping("/google")
+    public ResponseEntity<TokenResponse> googleLoginMobile(
+            @RequestBody(
+                    description = "안드로이드에서 받은 구글 ID 토큰",
+                    required = true,
+                    content = @Content(schema = @Schema(implementation = GoogleLoginRequest.class))
+            )
+            GoogleLoginRequest request
     ) {
-        TokenResponse tokens = googleOAuthService.login(code);
+        TokenResponse tokens = googleOAuthService.loginWithIdToken(request.idToken());
         return ResponseEntity.ok(tokens);
     }
 }
