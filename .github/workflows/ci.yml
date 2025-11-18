@@ -7,12 +7,14 @@ on:
     branches: [ "dev", "main" ]
 
 jobs:
-  build:
+  build-and-analyze:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # Sonar용 (히스토리/새 코드 계산에 필요)
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -20,16 +22,34 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      # auth 모듈 빌드 (테스트 제외)
-      - name: Build & test auth
-        working-directory: ./auth
-        run: |
-          chmod +x gradlew
-           ./gradlew clean build --no-daemon
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
 
-      # user 모듈 빌드 + 테스트 실행
-      - name: Build & test user
-        working-directory: ./user
-        run: |
-          chmod +x gradlew
-          ./gradlew clean build --no-daemon
+      - name: Cache SonarCloud packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: |
+            ${{ runner.os }}-sonar
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x ./gradlew
+
+      # 전체 멀티모듈(auth, user) 테스트 + JaCoCo 리포트 생성
+      - name: Run tests with JaCoCo
+        run: ./gradlew clean test jacocoTestReport --no-daemon
+
+      # SonarCloud 분석 (JaCoCo XML 리포트 + 커버리지 포함)
+      - name: SonarCloud Analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./gradlew sonar --no-daemon
