@@ -1,18 +1,17 @@
-package ziply.auth.oauth;
+package ziply.auth.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import jakarta.servlet.http.HttpServletResponse;
-import java.io.IOException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import ziply.auth.oauth.dto.request.GoogleLoginRequest;
-import ziply.auth.oauth.dto.response.TokenResponse;
+import ziply.auth.dto.request.GoogleLoginRequest;
+import ziply.auth.dto.response.TokenResponse;
+import ziply.auth.service.GoogleOAuthService;
 
 @RestController
 @RequestMapping("/api/v1/auth")

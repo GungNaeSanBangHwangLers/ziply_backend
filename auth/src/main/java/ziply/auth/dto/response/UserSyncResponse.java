@@ -1,4 +1,4 @@
-package ziply.auth.oauth.dto.response;
+package ziply.auth.dto.response;
 
 public record UserSyncResponse(
         Long id,

@@ -1,4 +1,4 @@
-package ziply.auth.oauth.dto.request;
+package ziply.auth.dto.request;
 
 public record UserSyncRequest(
         String email,
