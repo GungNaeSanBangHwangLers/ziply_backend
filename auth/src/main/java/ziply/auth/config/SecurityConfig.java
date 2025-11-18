@@ -32,7 +32,8 @@ public class SecurityConfig {
                                 "/webjars/**"
                         ).permitAll()
                         // OAuth / 인증 관련 API 허용
-                        .requestMatchers("/api/auth/**").permitAll()
+                        // 컨트롤러가 @RequestMapping("/api/v1/auth") 이므로 여기도 v1 포함
+                        .requestMatchers("/api/v1/auth/**").permitAll()
                         // 그 외 엔드포인트도 현재는 모두 허용
                         .anyRequest().permitAll()
                 );
