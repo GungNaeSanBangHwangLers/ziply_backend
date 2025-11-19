@@ -41,3 +41,18 @@ dependencies {
 tasks.named('test') {
 	useJUnitPlatform()
 }
+
+// --- Jacoco 설정 ---
+apply plugin: "jacoco"
+
+jacoco {
+	toolVersion = "0.8.10"
+}
+
+tasks.named("jacocoTestReport") {
+	dependsOn test
+	reports {
+		xml.required.set(true)
+		html.required.set(false)
+	}
+}
