@@ -15,14 +15,12 @@ class JwtTokenProviderTest {
 
     private JwtTokenProvider jwtTokenProvider;
 
-    // HS256은 최소 32바이트 이상 필요
     private static final String SECRET = "this_is_a_very_secure_secret_key_123456";
 
     @BeforeEach
     void setUp() throws Exception {
         jwtTokenProvider = new JwtTokenProvider();
 
-        // @Value로 주입되는 secretKey를 리플렉션으로 세팅
         Field secretKeyField = JwtTokenProvider.class.getDeclaredField("secretKey");
         secretKeyField.setAccessible(true);
         secretKeyField.set(jwtTokenProvider, SECRET);
@@ -38,7 +36,7 @@ class JwtTokenProviderTest {
     }
 
     @Test
-    void 유효한_토큰이면_validateToken_true_반환() {
+    void validateTokenReturnsTrueForValidToken() {
         String token = createTokenWithSubject("123");
 
         boolean result = jwtTokenProvider.validateToken(token);
@@ -47,9 +45,9 @@ class JwtTokenProviderTest {
     }
 
     @Test
-    void 변조된_토큰이면_validateToken_false_반환() {
+    void validateTokenReturnsFalseForTamperedToken() {
         String token = createTokenWithSubject("123");
-        String invalidToken = token + "x"; // 끝에 쓰레기 붙여서 변조
+        String invalidToken = token + "x";
 
         boolean result = jwtTokenProvider.validateToken(invalidToken);
 
@@ -57,7 +55,7 @@ class JwtTokenProviderTest {
     }
 
     @Test
-    void 유효한_토큰에서_getUserId_정상_파싱() {
+    void getUserIdParsesValidTokenCorrectly() {
         String token = createTokenWithSubject("123");
 
         Long userId = jwtTokenProvider.getUserId(token);
