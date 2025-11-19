@@ -43,7 +43,7 @@ class GoogleOAuthServiceTest {
 
     @Test
     @DisplayName("정상적인 idToken이면 USER-SERVICE 연동 후 JWT(access/refresh) 발급")
-    void loginWithIdToken_success() {
+    void loginWithIdTokenSuccess() {
         String idToken = "eyJhbGciOiJSUzI1NiIsImtpZCI6IjEyMzQ1NiJ9."
                 + "eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJlbWFpbCI6InRlc3RAZXhhbXBsZS5jb20ifQ."
                 + "dummy-signature";
@@ -81,7 +81,7 @@ class GoogleOAuthServiceTest {
 
     @Test
     @DisplayName("idToken 이 null 이면 AuthException(AUTH_FAILED) 발생")
-    void loginWithIdToken_nullIdToken() {
+    void loginWithIdTokenNullIdToken() {
         assertThatThrownBy(() -> googleOAuthService.loginWithIdToken(null))
                 .isInstanceOf(AuthException.class)
                 .hasMessage("AUTH_FAILED");
@@ -89,7 +89,7 @@ class GoogleOAuthServiceTest {
 
     @Test
     @DisplayName("idToken 이 공백이면 AuthException(AUTH_FAILED) 발생")
-    void loginWithIdToken_blankIdToken() {
+    void loginWithIdTokenBlankIdToken() {
         assertThatThrownBy(() -> googleOAuthService.loginWithIdToken("   "))
                 .isInstanceOf(AuthException.class)
                 .hasMessage("AUTH_FAILED");
@@ -97,7 +97,7 @@ class GoogleOAuthServiceTest {
 
     @Test
     @DisplayName("GoogleTokenVerifier 가 null payload 를 반환하면 AuthException(AUTH_FAILED) 발생")
-    void loginWithIdToken_googleVerifyReturnsNull() {
+    void loginWithIdTokenGoogleVerifyReturnsNull() {
         // given
         String idToken = "eyJhbGciOiJSUzI1NiIsImtpZCI6Ijc4OTAxMjMifQ."
                 + "eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJlbWFpbCI6InVzZXJAZ21haWwuY29tIn0."
@@ -113,7 +113,7 @@ class GoogleOAuthServiceTest {
 
     @Test
     @DisplayName("USER-SERVICE 가 null response 를 반환하면 AuthException(AUTH_FAILED) 발생")
-    void loginWithIdToken_userServiceReturnsNull() {
+    void loginWithIdTokenUserServiceReturnsNull() {
         // given
         String idToken = "eyJhbGciOiJSUzI1NiIsImtpZCI6IjEyMzQ1NiJ9."
                 + "eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJlbWFpbCI6InRlc3RAZXhhbXBsZS5jb20ifQ."

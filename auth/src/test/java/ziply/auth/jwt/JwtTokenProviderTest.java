@@ -33,7 +33,7 @@ class JwtTokenProviderTest {
 
     @Test
     @DisplayName("Access Token 생성 시 userId(subject)가 정상적으로 포함된다")
-    void generateAccessToken_success() {
+    void generateAccessTokenSuccess() {
         String userId = "123";
 
         String token = jwtTokenProvider.generateAccessToken(userId);
@@ -45,7 +45,7 @@ class JwtTokenProviderTest {
 
     @Test
     @DisplayName("Refresh Token 생성 시 userId(subject)가 정상적으로 포함된다")
-    void generateRefreshToken_success() {
+    void generateRefreshTokenSuccess() {
         String userId = "123";
 
         String token = jwtTokenProvider.generateRefreshToken(userId);
@@ -57,7 +57,7 @@ class JwtTokenProviderTest {
 
     @Test
     @DisplayName("유효한 JWT 토큰은 validateToken()이 true를 반환한다")
-    void validateToken_valid() {
+    void validateTokenValid() {
         String token = jwtTokenProvider.generateAccessToken("123");
 
         boolean isValid = jwtTokenProvider.validateToken(token);
@@ -67,7 +67,7 @@ class JwtTokenProviderTest {
 
     @Test
     @DisplayName("변조된(비정상) 토큰은 validateToken()이 false를 반환한다")
-    void validateToken_invalid() {
+    void validateTokenInvalid() {
         String invalidToken = "xxxx.yyyy.zzzz";
 
         boolean isValid = jwtTokenProvider.validateToken(invalidToken);
@@ -77,7 +77,7 @@ class JwtTokenProviderTest {
 
     @Test
     @DisplayName("만료된 토큰은 validateToken()이 false를 반환한다")
-    void validateToken_expired() {
+    void validateTokenExpired() {
         String expiredToken = Jwts.builder()
                 .setSubject("123")
                 .setIssuedAt(new Date(System.currentTimeMillis() - 1000 * 60))
@@ -97,7 +97,7 @@ class JwtTokenProviderTest {
 
     @Test
     @DisplayName("생성한 토큰에서 userId를 정상적으로 추출할 수 있다")
-    void getUserIdFromToken_success() {
+    void getUserIdFromTokenSuccess() {
         String token = jwtTokenProvider.generateAccessToken("42");
 
         String userId = jwtTokenProvider.getUserIdFromToken(token);

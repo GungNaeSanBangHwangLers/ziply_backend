@@ -35,7 +35,7 @@ class OAuthControllerTest {
 
     @Test
     @DisplayName("POST /api/v1/auth/google : ID 토큰으로 로그인 시 200과 JWT 토큰 응답")
-    void googleLoginMobile_success() throws Exception {
+    void googleLoginMobileSuccess() throws Exception {
         String idToken = "eyJhbGciOiJSUzI1NiIsImtpZCI6IjEyMzQ1NiJ9."
                 + "eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJlbWFpbCI6InRlc3RAZXhhbXBsZS5jb20ifQ."
                 + "dummy-signature";

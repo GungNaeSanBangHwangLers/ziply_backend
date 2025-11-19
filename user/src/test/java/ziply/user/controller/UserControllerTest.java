@@ -39,17 +39,14 @@ class UserControllerTest {
     }
 
     @Test
-    void createUser_호출시_Service_createUser_결과를_반환한다() {
-        // given
+    void createUserReturnsServiceResult() {
         UserCreateRequest request = new UserCreateRequest("test@example.com", "홍길동");
         UserResponse response = dummy(1L, "test@example.com", "홍길동");
 
         when(userService.createUser(any(UserCreateRequest.class))).thenReturn(response);
 
-        // when
         UserResponse result = userController.createUser(request);
 
-        // then
         assertThat(result.id()).isEqualTo(1L);
         assertThat(result.email()).isEqualTo("test@example.com");
         assertThat(result.name()).isEqualTo("홍길동");
@@ -57,17 +54,14 @@ class UserControllerTest {
     }
 
     @Test
-    void getMe_호출시_Service_getUserById_결과를_반환한다() {
-        // given
+    void getMeReturnsServiceResult() {
         Long userId = 1L;
         UserResponse response = dummy(1L, "me@example.com", "나자신");
 
         when(userService.getUserById(userId)).thenReturn(response);
 
-        // when
         UserResponse result = userController.getMe(userId);
 
-        // then
         assertThat(result.id()).isEqualTo(1L);
         assertThat(result.email()).isEqualTo("me@example.com");
         assertThat(result.name()).isEqualTo("나자신");
@@ -75,18 +69,15 @@ class UserControllerTest {
     }
 
     @Test
-    void updateUser_호출시_Service_updateUser_결과를_반환한다() {
-        // given
+    void updateUserReturnsServiceResult() {
         Long userId = 1L;
         UserUpdateRequest request = new UserUpdateRequest("이순신");
         UserResponse response = dummy(1L, "test@example.com", "이순신");
 
         when(userService.updateUser(userId, request)).thenReturn(response);
 
-        // when
         UserResponse result = userController.updateUser(userId, request);
 
-        // then
         assertThat(result.id()).isEqualTo(1L);
         assertThat(result.name()).isEqualTo("이순신");
         verify(userService).updateUser(userId, request);
