@@ -4,6 +4,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import ziply.user.dto.response.UserNameResponse;
 import ziply.user.service.UserService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -31,6 +32,12 @@ public class UserController {
     @GetMapping("/me")
     public UserResponse getMe(@AuthenticationPrincipal Long userId) {
         return userService.getUserById(userId);
+    }
+
+    @Operation(summary = "유저 이름 조회 (JWT)")
+    @GetMapping("/name")
+    public UserNameResponse getName(@AuthenticationPrincipal Long userId) {
+        return userService.getUserName(userId);
     }
 
 
