@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ziply.user.dto.request.UserCreateRequest;
 import ziply.user.dto.request.UserUpdateRequest;
+import ziply.user.dto.response.UserNameResponse;
 import ziply.user.dto.response.UserResponse;
 import ziply.user.domain.user.User;
 import ziply.user.domain.user.UserRepository;
@@ -29,10 +30,15 @@ public class UserService {
     }
 
     public UserResponse getUserById(Long userId) {
-
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 유저입니다."));
         return UserResponse.from(user);
+    }
+
+    public UserNameResponse getUserName(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 유저입니다."));
+        return UserNameResponse.from(user);
     }
 
     @Transactional
