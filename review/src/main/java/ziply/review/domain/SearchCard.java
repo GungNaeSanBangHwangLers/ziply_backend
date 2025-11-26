@@ -43,8 +43,9 @@ public class SearchCard {
         this.userId = userId;
         this.title = title;
         this.startDate = startDate;
+        this.createdAt = LocalDateTime.now();
+        this.status = SearchCardStatus.PLANNED;
         this.endDate = endDate;
-        this.status = SearchCardStatus.IN_PROGRESS;
     }
 
     public void addBasePoint(BasePoint basePoint) {
