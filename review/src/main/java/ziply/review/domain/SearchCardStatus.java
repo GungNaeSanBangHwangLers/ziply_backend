@@ -1,5 +1,6 @@
 package ziply.review.domain;
 
+import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -11,5 +12,6 @@ public enum SearchCardStatus {
     IN_PROGRESS("탐색중"),
     COMPLETED("탐색 완료");
 
+    @JsonValue
     private final String description;
 }
