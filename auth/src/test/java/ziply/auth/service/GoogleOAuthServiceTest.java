@@ -7,8 +7,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestTemplate;
+import ziply.auth.config.ServiceProperties;
 import ziply.auth.dto.request.UserSyncRequest;
 import ziply.auth.dto.response.TokenResponse;
 import ziply.auth.dto.response.UserSyncResponse;
@@ -33,12 +33,29 @@ class GoogleOAuthServiceTest {
     @Mock
     private RestTemplate restTemplate;
 
+    @Mock
+    private ServiceProperties serviceProperties;
+
     private GoogleOAuthService googleOAuthService;
+
+    private static final String USER_SERVICE_URL = "http://localhost:8080/api/v1/users";
 
     @BeforeEach
     void setUp() {
-        googleOAuthService = new GoogleOAuthService(googleTokenVerifier, jwtTokenProvider);
-        ReflectionTestUtils.setField(googleOAuthService, "restTemplate", restTemplate);
+        // ServiceProperties 설정
+        ServiceProperties.UserService userService = new ServiceProperties.UserService();
+        userService.setBaseUrl("http://localhost:8080");
+        ServiceProperties.UserService.Endpoint endpoint = new ServiceProperties.UserService.Endpoint();
+        endpoint.setCreateUser("/api/v1/users");
+        userService.setEndpoint(endpoint);
+        when(serviceProperties.getUser()).thenReturn(userService);
+
+        googleOAuthService = new GoogleOAuthService(
+                googleTokenVerifier,
+                jwtTokenProvider,
+                restTemplate,
+                serviceProperties
+        );
     }
 
     @Test
@@ -57,7 +74,7 @@ class GoogleOAuthServiceTest {
         UserSyncResponse userSyncResponse = new UserSyncResponse(1L, "test@example.com", "테스트 유저");
 
         when(restTemplate.postForObject(
-                eq("http://localhost:8080/api/v1/users"),
+                eq(USER_SERVICE_URL),
                 any(UserSyncRequest.class),
                 eq(UserSyncResponse.class)
         )).thenReturn(userSyncResponse);
@@ -126,7 +143,7 @@ class GoogleOAuthServiceTest {
         when(googleTokenVerifier.verify(idToken)).thenReturn(payload);
 
         when(restTemplate.postForObject(
-                eq("http://localhost:8080/api/v1/users"),
+                eq(USER_SERVICE_URL),
                 any(UserSyncRequest.class),
                 eq(UserSyncResponse.class)
         )).thenReturn(null);
