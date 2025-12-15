@@ -18,6 +18,7 @@ import ziply.user.domain.user.UserRepository;
 import ziply.user.dto.request.UserCreateRequest;
 import ziply.user.dto.request.UserUpdateRequest;
 import ziply.user.dto.response.UserResponse;
+import ziply.user.exception.UserException;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
@@ -76,7 +77,8 @@ class UserServiceTest {
         when(userRepository.findById(1L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> userService.getUserById(1L))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(UserException.class)
+                .hasMessageContaining("존재하지 않는 유저입니다");
     }
 
     @Test
@@ -99,6 +101,7 @@ class UserServiceTest {
 
         assertThatThrownBy(() ->
                 userService.updateUser(1L, new UserUpdateRequest("Yi Sun-shin"))
-        ).isInstanceOf(IllegalArgumentException.class);
+        ).isInstanceOf(UserException.class)
+                .hasMessageContaining("존재하지 않는 유저입니다");
     }
 }
