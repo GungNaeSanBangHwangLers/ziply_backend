@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import ziply.auth.config.ServiceProperties;
 import ziply.auth.jwt.GoogleTokenVerifier;
 import ziply.auth.jwt.JwtTokenProvider;
 import ziply.auth.dto.request.UserSyncRequest;
@@ -19,7 +20,8 @@ public class GoogleOAuthService {
 
     private final GoogleTokenVerifier googleTokenVerifier;
     private final JwtTokenProvider jwtTokenProvider;
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
+    private final ServiceProperties serviceProperties;
 
     public TokenResponse loginWithIdToken(String idToken) {
         log.info("loginWithIdToken() called");
@@ -74,8 +76,11 @@ public class GoogleOAuthService {
         UserSyncRequest request = new UserSyncRequest(email, name);
 
         try {
+            String userServiceUrl = buildUserServiceUrl();
+            log.debug("[AUTH] Calling USER-SERVICE at: {}", userServiceUrl);
+
             UserSyncResponse response = restTemplate.postForObject(
-                    "http://localhost:8080/api/v1/users",
+                    userServiceUrl,
                     request,
                     UserSyncResponse.class
             );
@@ -91,5 +96,11 @@ public class GoogleOAuthService {
             log.error("[AUTH] Failed to call USER-SERVICE", e);
             throw new AuthException("AUTH_FAILED");
         }
+    }
+
+    private String buildUserServiceUrl() {
+        String baseUrl = serviceProperties.getUser().getBaseUrl();
+        String endpoint = serviceProperties.getUser().getEndpoint().getCreateUser();
+        return baseUrl + endpoint;
     }
 }
