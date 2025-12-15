@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -34,7 +35,7 @@ public class SearchCardController {
     ) {
         List<SearchCardResponse> responseList = searchCardService.getSearchCards(userId);
 
-        return ResponseEntity.ok(responseList);
+        return ResponseEntity.status(HttpStatus.CREATED).body(responseList);
     }
 
     @Operation(summary = "주거 탐색 카드 생성", description = "새로운 주거 탐색 카드를 생성하고, 관련된 기점(학교, 회사 등) 정보를 함께 저장합니다.")
@@ -45,6 +46,6 @@ public class SearchCardController {
             @RequestBody @Valid SearchCardCreateRequest request
     ) {
         UUID cardId = searchCardService.createSearchCard(userId, request);
-        return ResponseEntity.ok(cardId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(cardId);
     }
 }
