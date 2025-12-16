@@ -19,11 +19,9 @@ public class ReviewProducerService {
         kafkaTemplate.send(TOPIC_HOUSE_CREATED, String.valueOf(event.getHouseId()), event)
                 .whenComplete((result, ex) -> {
                     if (ex == null) {
-                        log.info("[Review] 발송 성공. Offset: {}",
-                                result.getRecordMetadata().offset());
+                        log.info("[Review] 발송 성공. Offset: {}", result.getRecordMetadata().offset());
                     } else {
-                        log.error("[Review] 발송 실패. HouseId: {}",
-                                event.getHouseId(), ex);
+                        log.error("[Review] 발송 실패. HouseId: {}", event.getHouseId(), ex);
                     }
                 });
     }

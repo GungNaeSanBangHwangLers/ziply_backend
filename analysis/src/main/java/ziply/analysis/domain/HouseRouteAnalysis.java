@@ -4,11 +4,12 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
+@Table(name = "house_route_analysis")
 @Getter
 @Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-public class AnalysisResult {
+public class HouseRouteAnalysis {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -20,8 +21,9 @@ public class AnalysisResult {
     @Column(nullable = false)
     private Long basePointId;
 
-    private Integer walkingTimeMin;
+    private String basePointName;
 
+    private Integer walkingTimeMin;
     private Double walkingDistanceKm;
 
     @Column(length = 50)
