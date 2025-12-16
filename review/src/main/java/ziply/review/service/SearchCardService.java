@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ziply.review.domain.BasePoint;
 import ziply.review.domain.SearchCard;
 import ziply.review.dto.request.SearchCardCreateRequest;
+import ziply.review.dto.response.GeocodingResult;
 import ziply.review.dto.response.SearchCardResponse;
 import ziply.review.repository.SearchCardRepository;
 
@@ -20,27 +21,38 @@ import ziply.review.repository.SearchCardRepository;
 public class SearchCardService {
 
     private final SearchCardRepository searchCardRepository;
+    private final GeocodingService geocodingService;
 
     @Transactional
     public UUID createSearchCard(Long userId, SearchCardCreateRequest request) {
         log.info("[REVIEW] Creating search card for user: {}, title: {}", userId, request.getTitle());
 
-        SearchCard searchCard = new SearchCard(
-                userId,
-                request.getTitle(),
-                request.getStartDate(),
-                request.getEndDate()
-        );
+        SearchCard searchCard = new SearchCard(userId, request.getTitle(), request.getStartDate(),
+                request.getEndDate());
 
         if (request.getBasePoints() != null && !request.getBasePoints().isEmpty()) {
-            log.debug("[REVIEW] Adding {} base points to search card", request.getBasePoints().size());
+            log.debug("[REVIEW] Adding {} base points to search card (Geocoding started)",
+                    request.getBasePoints().size());
+
             for (SearchCardCreateRequest.BasePointRequest bpDto : request.getBasePoints()) {
-                BasePoint basePoint = new BasePoint(
-                        bpDto.getAlias(),
-                        bpDto.getAddress(),
-                        bpDto.getLatitude(),
-                        bpDto.getLongitude()
-                );
+                String address = bpDto.getAddress();
+
+                if (address == null || address.isEmpty()) {
+                    log.warn("[REVIEW] Skipping base point with empty address: {}", bpDto.getAlias());
+                    continue;
+                }
+
+                // 1. GeocodingService를 사용하여 주소를 좌표로 변환
+                GeocodingResult geoResult;
+                try {
+                    geoResult = geocodingService.geocodeAddress(address);
+                } catch (RuntimeException e) {
+                    log.warn("[REVIEW] Skipping base point due to geocoding failure for address: {}. Error: {}",
+                            address, e.getMessage());
+                    continue;
+                }
+                BasePoint basePoint = new BasePoint(bpDto.getAlias(), bpDto.getAddress(), geoResult.getLatitude(),
+                        geoResult.getLongitude());
                 searchCard.addBasePoint(basePoint);
             }
         }
@@ -54,8 +66,6 @@ public class SearchCardService {
     public List<SearchCardResponse> getSearchCards(Long userId) {
         List<SearchCard> cards = searchCardRepository.findAllByUserId(userId);
 
-        return cards.stream()
-                .map(SearchCardResponse::from)
-                .collect(Collectors.toList());
+        return cards.stream().map(SearchCardResponse::from).collect(Collectors.toList());
     }
 }

@@ -11,7 +11,6 @@ import lombok.Setter;
 public class HouseCreateRequest {
     private String address;
     private LocalDateTime visitDateTime;
-
     private Double latitude;
     private Double longitude;
 }
