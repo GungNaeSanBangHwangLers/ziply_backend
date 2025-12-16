@@ -1,5 +1,4 @@
 plugins {
-    // SonarCloud 플러그인 (루트에서만 사용)
     id "org.sonarqube" version "7.0.1.6134"
 }
 
@@ -13,7 +12,6 @@ allprojects {
 }
 
 subprojects {
-    // 공통 테스트 설정 (JUnit 5)
     tasks.withType(Test).configureEach {
         useJUnitPlatform()
     }
@@ -22,11 +20,10 @@ subprojects {
 // SonarCloud 설정 (레포 전체 1개 프로젝트)
 sonar {
     properties {
-        property "sonar.projectKey", "ziply-backend"              // SonarCloud 화면에 나온 정확한 key 로 변경
+        property "sonar.projectKey", "ziply-backend"
         property "sonar.organization", "gungnaesanbanghwanglers"
         property "sonar.host.url", "https://sonarcloud.io"
 
-        // 모듈별 JaCoCo 리포트 경로 (조금 뒤에 설정함)
         property "sonar.coverage.jacoco.xmlReportPaths",
                 "auth/build/reports/jacoco/test/jacocoTestReport.xml," +
                         "user/build/reports/jacoco/test/jacocoTestReport.xml"

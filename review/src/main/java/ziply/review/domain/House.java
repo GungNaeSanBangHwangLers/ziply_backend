@@ -24,11 +24,16 @@ public class House {
 
     private LocalDateTime visitDateTime;
 
+    private Double latitude;
+    private Double longitude;
+
     @Builder
-    public House(SearchCard searchCard, String address, LocalDateTime visitDateTime) {
+    public House(SearchCard searchCard, String address, LocalDateTime visitDateTime, Double latitude, Double longitude) {
         this.searchCard = searchCard;
         this.address = address;
         this.visitDateTime = visitDateTime;
+        this.latitude = latitude;
+        this.longitude = longitude;
     }
 
     public void assignSearchCard(SearchCard searchCard) {
