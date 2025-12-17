@@ -28,7 +28,8 @@ public class House {
     private Double longitude;
 
     @Builder
-    public House(SearchCard searchCard, String address, LocalDateTime visitDateTime, Double latitude, Double longitude) {
+    public House(SearchCard searchCard, String address, LocalDateTime visitDateTime, Double latitude,
+                 Double longitude) {
         this.searchCard = searchCard;
         this.address = address;
         this.visitDateTime = visitDateTime;
@@ -38,5 +39,14 @@ public class House {
 
     public void assignSearchCard(SearchCard searchCard) {
         this.searchCard = searchCard;
+    }
+
+    public void update(String address, LocalDateTime visitDateTime) {
+        if (address != null && !address.isBlank()) {
+            this.address = address;
+        }
+        if (visitDateTime != null) {
+            this.visitDateTime = visitDateTime;
+        }
     }
 }

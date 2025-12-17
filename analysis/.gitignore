@@ -16,7 +16,8 @@ build/
 bin/
 !**/src/main/**/bin/
 !**/src/test/**/bin/
-
+analysis/src/main/resources/seoulBusPosition.json
+analysis/src/main/resources/seoulBusCount.json
 ### IntelliJ IDEA ###
 .idea
 *.iws

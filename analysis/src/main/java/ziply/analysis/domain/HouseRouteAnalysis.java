@@ -1,6 +1,7 @@
 package ziply.analysis.domain;
 
 import jakarta.persistence.*;
+import java.util.UUID;
 import lombok.*;
 
 @Entity
@@ -16,6 +17,9 @@ public class HouseRouteAnalysis {
     private Long id;
 
     @Column(nullable = false)
+    private UUID searchCardId;
+
+    @Column(nullable = false)
     private Long houseId;
 
     @Column(nullable = false)
@@ -25,7 +29,4 @@ public class HouseRouteAnalysis {
 
     private Integer walkingTimeMin;
     private Double walkingDistanceKm;
-
-    @Column(length = 50)
-    private String basePointType;
 }

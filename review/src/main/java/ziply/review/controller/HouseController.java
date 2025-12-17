@@ -8,12 +8,17 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import ziply.review.dto.request.HouseCreateRequest;
+import ziply.review.dto.request.HouseUpdateRequest;
+import ziply.review.dto.response.HouseListResponse;
 import ziply.review.service.HouseService;
 
 import java.util.UUID;
@@ -28,13 +33,37 @@ public class HouseController {
 
     @Operation(summary = "집(매물) 일괄 추가", description = "여러 개의 집 정보를 리스트로 받아 한 번에 저장합니다.")
     @PostMapping("/{cardId}/houses")
-    public ResponseEntity<List<Long>> createHouses(
-            @PathVariable UUID cardId,
-            @AuthenticationPrincipal Long userId,
-            @RequestBody @Valid List<HouseCreateRequest> requests
-    ) {
+    public ResponseEntity<List<Long>> createHouses(@PathVariable UUID cardId,
+                                                   @AuthenticationPrincipal Long userId,
+                                                   @RequestBody @Valid List<HouseCreateRequest> requests) {
         List<Long> createdIds = houseService.createHouses(cardId, requests, userId);
-
         return ResponseEntity.status(HttpStatus.CREATED).body(createdIds);
+    }
+
+    @Operation(summary = "탐색 카드별 집 목록 조회", description = "특정 탐색 카드에 등록된 모든 집 정보를 조회합니다.")
+    @GetMapping("/{searchCardId}/houses")
+    public ResponseEntity<List<HouseListResponse>> getHouses(@PathVariable UUID searchCardId,
+                                                             @AuthenticationPrincipal Long userId) {
+        List<HouseListResponse> responses = houseService.getHousesBySearchCard(searchCardId, userId);
+        return ResponseEntity.ok(responses);
+    }
+
+    @Operation(summary = "집 정보 수정", description = "등록된 집의 주소 또는 방문 예정 시간을 수정합니다. 주소 변경 시 좌표 재계산 및 분석 데이터 업데이트가 수행됩니다.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "204", description = "수정 성공")
+    @PatchMapping("/{houseId}")
+    public ResponseEntity<Void> updateHouse(@PathVariable Long houseId,
+                                            @AuthenticationPrincipal Long userId,
+                                            @Valid @RequestBody HouseUpdateRequest request) {
+        houseService.updateHouse(houseId, userId, request);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "집(매물) 삭제", description = "등록된 집 정보를 삭제합니다. 연관된 체크리스트와 분석 데이터도 함께 삭제됩니다.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "204", description = "삭제 성공")
+    @DeleteMapping("/{houseId}")
+    public ResponseEntity<Void> deleteHouse(@PathVariable Long houseId,
+                                            @AuthenticationPrincipal Long userId) {
+        houseService.deleteHouse(houseId, userId);
+        return ResponseEntity.noContent().build();
     }
 }

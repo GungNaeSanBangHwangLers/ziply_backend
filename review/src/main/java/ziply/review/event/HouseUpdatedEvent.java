@@ -1,11 +1,11 @@
-package ziply.analysis.event;
+package ziply.review.event;
 
+import java.util.List;
 import java.util.UUID;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
-import java.util.List;
 import lombok.ToString;
 
 @Getter
@@ -13,16 +13,20 @@ import lombok.ToString;
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString
-public class HouseCreatedEvent {
+public class HouseUpdatedEvent {
 
     private Long houseId;
+    private UUID searchCardId;
+
+    private String address;
+
     private Double latitude;
     private Double longitude;
 
-    private UUID searchCardId;
-
     private Long timestamp;
-    private String action = "CREATED";
+
+    @Builder.Default
+    private String action = "UPDATED";
 
     private List<BasePointDetail> basePoints;
 
