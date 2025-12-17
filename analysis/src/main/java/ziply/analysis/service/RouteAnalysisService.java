@@ -1,5 +1,6 @@
 package ziply.analysis.service;
 
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -7,6 +8,8 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ziply.analysis.domain.HouseRouteAnalysis;
@@ -36,8 +39,8 @@ public class RouteAnalysisService {
 
         event.getBasePoints().forEach(basePoint -> {
             try {
-                RouteResult result = kakaoRouteProvider.getWalkingRoute(
-                        houseLat, houseLon, basePoint.getLatitude(), basePoint.getLongitude());
+                RouteResult result = kakaoRouteProvider.getWalkingRoute(houseLat, houseLon, basePoint.getLatitude(),
+                        basePoint.getLongitude());
 
                 // CreatedEvent 타입임을 명시
                 saveRouteAnalysisResult(searchCardId, event.getHouseId(), basePoint, result);
@@ -61,15 +64,14 @@ public class RouteAnalysisService {
         if (event.getBasePoints() != null) {
             event.getBasePoints().forEach(basePoint -> {
                 try {
-                    RouteResult routeResult = kakaoRouteProvider.getWalkingRoute(
-                            houseLat, houseLon, basePoint.getLatitude(), basePoint.getLongitude());
+                    RouteResult routeResult = kakaoRouteProvider.getWalkingRoute(houseLat, houseLon,
+                            basePoint.getLatitude(), basePoint.getLongitude());
 
                     // UpdatedEvent 타입임을 명시
                     saveRouteAnalysisResult(event.getSearchCardId(), event.getHouseId(), basePoint, routeResult);
 
                 } catch (Exception e) {
-                    log.error("수정 경로 분석 중 오류 발생: HouseId={}, BasePointId={}",
-                            event.getHouseId(), basePoint.getId(), e);
+                    log.error("수정 경로 분석 중 오류 발생: HouseId={}, BasePointId={}", event.getHouseId(), basePoint.getId(), e);
                 }
             });
         }
@@ -90,7 +92,8 @@ public class RouteAnalysisService {
         saveCommon(searchCardId, houseId, basePoint.getId(), basePoint.getName(), result);
     }
 
-    private void saveCommon(UUID searchCardId, Long houseId, Long basePointId, String basePointName, RouteResult result) {
+    private void saveCommon(UUID searchCardId, Long houseId, Long basePointId, String basePointName,
+                            RouteResult result) {
         int distanceMeters = result.distanceMeters();
         Double walkingDistanceKm = distanceMeters / 1000.0;
         Integer walkingTimeMin = 0;
@@ -100,22 +103,29 @@ public class RouteAnalysisService {
             walkingTimeMin = (int) Math.round(walkingTimeHour * 60);
         }
 
-        HouseRouteAnalysis analysis = HouseRouteAnalysis.builder()
-                .searchCardId(searchCardId)
-                .houseId(houseId)
-                .basePointId(basePointId)
-                .basePointName(basePointName)
-                .walkingTimeMin(walkingTimeMin)
-                .walkingDistanceKm(walkingDistanceKm)
-                .build();
+        HouseRouteAnalysis analysis = HouseRouteAnalysis.builder().searchCardId(searchCardId).houseId(houseId)
+                .basePointId(basePointId).basePointName(basePointName).walkingTimeMin(walkingTimeMin)
+                .walkingDistanceKm(walkingDistanceKm).build();
 
         routeAnalysisRepository.save(analysis);
         log.info("-> 직주거리 저장 완료: BasePointId={}, Time={}분", basePointId, walkingTimeMin);
     }
 
     @Transactional(readOnly = true)
-    public SearchCardAnalysisResponse getAnalysisByCard(UUID searchCardId) {
+    public SearchCardAnalysisResponse getAnalysisByCard(UUID searchCardId, Long userId) {
+
+        Long count = routeAnalysisRepository.countBySearchCardIdAndUserId(searchCardId, userId);
+
+        if (count == null || count <= 0) {
+            throw new AccessDeniedException("해당 카드에 대한 접근 권한이 없거나 존재하지 않는 카드입니다.");
+        }
+
         List<HouseRouteAnalysis> allData = routeAnalysisRepository.findBySearchCardId(searchCardId);
+
+        if (allData.isEmpty()) {
+            return new SearchCardAnalysisResponse(searchCardId, Collections.emptyList());
+        }
+
         Map<Long, List<HouseRouteAnalysis>> grouped = allData.stream()
                 .collect(Collectors.groupingBy(HouseRouteAnalysis::getBasePointId));
 
