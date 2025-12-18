@@ -5,10 +5,10 @@ import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import ziply.analysis.domain.HouseRouteAnalysis;
+import ziply.analysis.domain.HouseAnalysis;
 
-public interface HouseRouteAnalysisRepository extends JpaRepository<HouseRouteAnalysis, Long> {
-    List<HouseRouteAnalysis> findBySearchCardId(UUID searchCardId);
+public interface HouseRouteAnalysisRepository extends JpaRepository<HouseAnalysis, Long> {
+    List<HouseAnalysis> findBySearchCardId(UUID searchCardId);
 
     void deleteByHouseId(Long houseId);
 

@@ -1,18 +1,23 @@
 package ziply.analysis.domain;
 
 import jakarta.persistence.*;
+import java.util.UUID;
 import lombok.*;
 
 @Entity
+@Table(name = "house_analysis")
 @Getter
 @Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-public class AnalysisResult {
+public class HouseAnalysis {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(nullable = false)
+    private UUID searchCardId;
 
     @Column(nullable = false)
     private Long houseId;
@@ -20,10 +25,11 @@ public class AnalysisResult {
     @Column(nullable = false)
     private Long basePointId;
 
-    private Integer walkingTimeMin;
+    private String basePointName;
 
+    private Integer walkingTimeMin;
     private Double walkingDistanceKm;
 
-    @Column(length = 50)
-    private String basePointType;
+    private Integer dayScore;
+    private Integer nightScore;
 }
