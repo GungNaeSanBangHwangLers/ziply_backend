@@ -60,7 +60,7 @@ public class NoiseScoringService {
         """, column);
 
         Long count = jdbcTemplate.queryForObject(sql, Long.class, lat, lon, lat);
-        return (count == null) ? 0.0 : Math.min(count / max, 1.0);
+        return Math.min(count / max, 1.0);
     }
 
     private HouseInfrastructure getInfra(Long houseId) {

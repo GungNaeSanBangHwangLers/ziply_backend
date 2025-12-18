@@ -68,4 +68,8 @@ public class SearchCardService {
 
         return cards.stream().map(SearchCardResponse::from).collect(Collectors.toList());
     }
+
+    public boolean isCardOwner(UUID searchCardId, Long userId) {
+        return searchCardRepository.existsByIdAndUserId(searchCardId, userId);
+    }
 }
