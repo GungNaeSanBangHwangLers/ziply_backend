@@ -17,7 +17,6 @@ public class KakaoRouteProvider {
     private String kakaoRestApiKey;
 
     private final WebClient webClient = WebClient.create("https://apis-navi.kakaomobility.com");
-
     private static final String DIRECTION_ENDPOINT = "/v1/directions";
 
     public record RouteResult(int durationSeconds, int distanceMeters) {
@@ -40,12 +39,10 @@ public class KakaoRouteProvider {
             log.error("카카오 경로 API 호출 실패: Origin={}, Dest={}", origin, destination, e);
             throw new RuntimeException("카카오 API 호출 실패", e);
         }
-
         if (response == null || response.getRoutes() == null || response.getRoutes().isEmpty()) {
             log.warn("카카오 API: 경로를 찾을 수 없음 (Empty Route). Origin={}, Dest={}", origin, destination);
             return new RouteResult(0, 0);
         }
-
         return new RouteResult(0, response.getDistanceMeters());
     }
 }

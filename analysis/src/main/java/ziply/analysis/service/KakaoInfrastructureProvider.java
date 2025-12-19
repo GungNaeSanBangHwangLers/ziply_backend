@@ -24,7 +24,7 @@ public class KakaoInfrastructureProvider {
                             .queryParam("category_group_code", categoryCode).queryParam("x", lon)  // 경도
                             .queryParam("y", lat)  // 위도
                             .queryParam("radius", radius).build()).header("Authorization", "KakaoAK " + kakaoApiKey)
-                    .retrieve().bodyToMono(Map.class).block(); // 인프라 조회는 동기적으로 결과를 받아야 하므로 .block() 사용
+                    .retrieve().bodyToMono(Map.class).block();
 
             if (response != null && response.containsKey("meta")) {
                 Map<String, Object> meta = (Map<String, Object>) response.get("meta");

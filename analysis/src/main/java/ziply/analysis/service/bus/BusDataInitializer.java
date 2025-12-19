@@ -1,49 +1,37 @@
 package ziply.analysis.service.bus;
 
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Component
+@RequiredArgsConstructor
 public class BusDataInitializer implements CommandLineRunner {
 
     private final BusLocationBatchService locationBatchService;
     private final BusOperationBatchService operationBatchService;
     private final DataCheckService dataCheckService;
 
-    public BusDataInitializer(
-            BusLocationBatchService locationBatchService,
-            BusOperationBatchService operationBatchService,
-            DataCheckService dataCheckService) {
-        this.locationBatchService = locationBatchService;
-        this.operationBatchService = operationBatchService;
-        this.dataCheckService = dataCheckService;
-    }
-
     @Override
-    @Transactional
-    public void run(String... args) throws Exception {
-        System.out.println("=================================================");
+    public void run(String... args) {
+        log.info("Starting bus data initialization check...");
 
         if (!dataCheckService.isDataAlreadyLoaded("bus_stop_location")) {
-            System.out.println("[STEP 1] 버스 정류장 위치 정보 적재 시작...");
+            log.info("Loading bus stop location data...");
             locationBatchService.loadBusLocationData();
-            System.out.println("[STEP 1] 버스 정류장 위치 정보 적재 완료.");
         } else {
-            System.out.println("ℹ[STEP 1] bus_stop_location 데이터가 이미 존재하여 적재를 건너뜁니다.");
+            log.info("Bus stop location data already exists. Skipping load.");
         }
 
-        System.out.println("-------------------------------------------------");
-
-        // 2. 버스 운행 횟수 정보 적재 (테이블: bus_operations)
         if (!dataCheckService.isDataAlreadyLoaded("bus_operations")) {
-            System.out.println("[STEP 2] 버스 운행 횟수 정보 적재 시작...");
+            log.info("Loading bus operation data...");
             operationBatchService.loadBusOperationData();
-            System.out.println("[STEP 2] 버스 운행 횟수 정보 적재 완료.");
         } else {
-            System.out.println("ℹ[STEP 2] bus_operations 데이터가 이미 존재하여 적재를 건너뜁니다.");
+            log.info("Bus operation data already exists. Skipping load.");
         }
 
-        System.out.println("=================================================");
+        log.info("Bus data initialization check completed.");
     }
 }

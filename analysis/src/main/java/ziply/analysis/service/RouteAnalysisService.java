@@ -1,5 +1,6 @@
 package ziply.analysis.service;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -12,12 +13,12 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 import ziply.analysis.domain.HouseAnalysis;
 import ziply.analysis.dto.response.BasePointAnalysisDto;
 import ziply.analysis.dto.response.HouseAnalysisResultDto;
-import ziply.analysis.dto.response.SearchCardAnalysisResponse;
+import ziply.analysis.dto.response.SearchCardDistanceAnalysis;
+import ziply.analysis.dto.response.SearchCardScoreAnalysis;
 import ziply.analysis.event.HouseCreatedEvent;
 import ziply.analysis.event.HouseUpdatedEvent;
 import ziply.analysis.repository.HouseInfrastructureRepository;
@@ -37,13 +38,11 @@ public class RouteAnalysisService {
     private final KakaoRouteProvider kakaoRouteProvider;
     private final KakaoInfrastructureService kakaoInfrastructureService;
     private final NoiseScoringService noiseScoringService;
-    private final WebClient.Builder webClientBuilder;
 
     @Transactional
     public void processHouseCreation(HouseCreatedEvent event) {
         List<AnalysisPoint> points = event.getBasePoints().stream()
                 .map(p -> new AnalysisPoint(p.getId(), p.getName(), p.getLatitude(), p.getLongitude())).toList();
-
         processAnalysis(event.getSearchCardId(), event.getHouseId(), event.getLatitude(), event.getLongitude(), points);
     }
 
@@ -67,8 +66,6 @@ public class RouteAnalysisService {
 
         int dayScore = noiseScoringService.calculateDayNoiseScore(houseId, lat, lon);
         int nightScore = noiseScoringService.calculateNightNoiseScore(houseId, lat, lon);
-        ;
-
         for (AnalysisPoint point : points) {
             try {
                 RouteResult route = kakaoRouteProvider.getWalkingRoute(lat, lon, point.lat(), point.lon());
@@ -92,18 +89,12 @@ public class RouteAnalysisService {
     }
 
     @Transactional(readOnly = true)
-    public SearchCardAnalysisResponse getAnalysisByCard(UUID searchCardId, Long userId) {
-            Boolean isOwner = org.springframework.web.reactive.function.client.WebClient.create("http://localhost:8082")
-                    .get()
-                    .uri(uriBuilder -> uriBuilder
-                            .path("/api/v1/review/card/{searchCardId}/owner-check")
-                            .queryParam("userId", userId)
-                            .build(searchCardId))
-                    .retrieve()
-                    .onStatus(HttpStatusCode::isError, clientResponse ->
-                            Mono.error(new AccessDeniedException("리뷰 서비스 권한 확인 중 오류가 발생했습니다.")))
-                    .bodyToMono(Boolean.class)
-                    .block(); // 권한 확인이 끝날 때까지 동기 대기
+    public SearchCardDistanceAnalysis getSearchCardDistanceAnalysis(UUID searchCardId, Long userId) {
+        Boolean isOwner = org.springframework.web.reactive.function.client.WebClient.create("http://localhost:8082")
+                .get().uri(uriBuilder -> uriBuilder.path("/api/v1/review/card/{searchCardId}/owner-check")
+                        .queryParam("userId", userId).build(searchCardId)).retrieve().onStatus(HttpStatusCode::isError,
+                        clientResponse -> Mono.error(new AccessDeniedException("리뷰 서비스 권한 확인 중 오류가 발생했습니다.")))
+                .bodyToMono(Boolean.class).block();
 
         if (isOwner == null || !isOwner) {
             log.warn("[Security Audit] Unauthorized card access: user={}, card={}", userId, searchCardId);
@@ -113,7 +104,7 @@ public class RouteAnalysisService {
         List<HouseAnalysis> allData = routeAnalysisRepository.findBySearchCardId(searchCardId);
 
         if (allData.isEmpty()) {
-            return new SearchCardAnalysisResponse(searchCardId, Collections.emptyList());
+            return new SearchCardDistanceAnalysis(Collections.emptyList());
         }
 
         Map<Long, List<HouseAnalysis>> grouped = allData.stream()
@@ -126,7 +117,39 @@ public class RouteAnalysisService {
                     results.stream().map(HouseAnalysisResultDto::from).toList());
         }).toList();
 
-        return new SearchCardAnalysisResponse(searchCardId, basePointDtos);
+        return new SearchCardDistanceAnalysis(basePointDtos);
+    }
+
+    public List<SearchCardScoreAnalysis> getSearchCardScoreAnalysis(UUID searchCardId, Long userId) {
+        Boolean isOwner = org.springframework.web.reactive.function.client.WebClient.create("http://localhost:8082")
+                .get().uri(uriBuilder -> uriBuilder.path("/api/v1/review/card/{searchCardId}/owner-check")
+                        .queryParam("userId", userId).build(searchCardId)).retrieve().onStatus(HttpStatusCode::isError,
+                        clientResponse -> Mono.error(new AccessDeniedException("리뷰 서비스 권한 확인 중 오류가 발생했습니다.")))
+                .bodyToMono(Boolean.class).block();
+
+        if (isOwner == null || !isOwner) {
+            log.warn("[Security Audit] Unauthorized card access: user={}, card={}", userId, searchCardId);
+            throw new AccessDeniedException("해당 카드에 대한 접근 권한이 없습니다.");
+        }
+
+        List<HouseAnalysis> allData = routeAnalysisRepository.findBySearchCardId(searchCardId);
+
+        return allData.stream().collect(Collectors.groupingBy(HouseAnalysis::getHouseId)).entrySet().stream()
+                .map(entry -> {
+                    Long houseId = entry.getKey();
+                    List<HouseAnalysis> houseDataList = entry.getValue();
+
+                    HouseAnalysis first = houseDataList.get(0);
+
+                    SearchCardScoreAnalysis dto = new SearchCardScoreAnalysis();
+                    dto.setHouseId(houseId);
+                    dto.setDayScore(first.getDayScore());
+                    dto.setNightScore(first.getNightScore());
+                    double avg = (first.getDayScore() + first.getNightScore()) / 2.0;
+                    dto.setAvgScore(avg);
+
+                    return dto;
+                }).sorted(Comparator.comparing(SearchCardScoreAnalysis::getHouseId)).collect(Collectors.toList());
     }
 
     private record AnalysisPoint(Long id, String name, double lat, double lon) {

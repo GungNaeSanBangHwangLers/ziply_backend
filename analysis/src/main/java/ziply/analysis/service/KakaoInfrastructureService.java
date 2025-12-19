@@ -17,11 +17,9 @@ public class KakaoInfrastructureService {
         if (infraRepository.existsByHouseId(houseId)) {
             return;
         }
-
         int schoolCount = provider.getCategoryCount(lat, lon, "SC4", 200);
         int restaurantCount = provider.getCategoryCount(lat, lon, "FD6", 200);
         int subwayCount = provider.getCategoryCount(lat, lon, "SW8", 300);
-
         infraRepository.save(new HouseInfrastructure(houseId, schoolCount, restaurantCount, subwayCount));
     }
 }

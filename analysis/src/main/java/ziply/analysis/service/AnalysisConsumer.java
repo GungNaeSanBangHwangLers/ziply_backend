@@ -46,7 +46,6 @@ public class AnalysisConsumer {
     @Transactional
     @KafkaListener(topics = "house-deleted", groupId = "analysis-group")
     public void handleHouseDeleted(String houseIdStr) {
-        // 따옴표(")가 포함되어 올 경우를 대비해 제거 로직 추가
         String cleanId = houseIdStr.replace("\"", "");
 
         try {

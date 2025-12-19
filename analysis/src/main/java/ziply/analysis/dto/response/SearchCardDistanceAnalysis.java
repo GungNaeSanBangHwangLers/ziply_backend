@@ -1,10 +1,8 @@
 package ziply.analysis.dto.response;
 
 import java.util.List;
-import java.util.UUID;
 
-public record SearchCardAnalysisResponse(
-        UUID searchCardId,
+public record SearchCardDistanceAnalysis(
         List<BasePointAnalysisDto> basePoints
 ) {}
 

@@ -41,37 +41,58 @@ public class HouseService {
             throw new SecurityException("본인의 탐색 카드에만 집을 추가할 수 있습니다.");
         }
 
+        long existingHouseCount = houseRepository.countBySearchCard(searchCard);
+        if (existingHouseCount + requests.size() > 7) {
+            throw new IllegalArgumentException("한 카드당 집은 최대 7개까지 등록할 수 있습니다. (현재: " + existingHouseCount + "개)");
+        }
+
         requests.forEach(request -> {
             try {
                 geocodingService.geocodeAddress(request);
             } catch (RuntimeException e) {
-                log.error("[HOUSE] Geocoding 실패: 주소 {} 처리 중 오류 발생. 해당 집을 건너뜁니다.", request.getAddress(), e);
+                log.error("[HOUSE] Geocoding 실패: 주소 {} 처리 중 오류 발생. 해당 집을 건너뜁니다.", request.getAddress());
             }
         });
+
         List<House> houseList = requests.stream()
                 .filter(request -> request.getLatitude() != null && request.getLongitude() != null)
-                .map(request -> House.builder().searchCard(searchCard).address(request.getAddress())
-                        .visitDateTime(request.getVisitDateTime()).latitude(request.getLatitude())
-                        .longitude(request.getLongitude()).build()).collect(Collectors.toList());
+                .map(request -> House.builder()
+                        .searchCard(searchCard)
+                        .address(request.getAddress())
+                        .visitDateTime(request.getVisitDateTime())
+                        .latitude(request.getLatitude())
+                        .longitude(request.getLongitude())
+                        .build())
+                .collect(Collectors.toList());
 
         List<House> savedHouses = houseRepository.saveAll(houseList);
         log.info("[HOUSE] Successfully saved {} houses to DB. {} were skipped due to Geocoding failure.",
                 savedHouses.size(), requests.size() - savedHouses.size());
 
         List<BasePointDetail> basePointDetails = searchCard.getBasePoints().stream()
-                .map(bp -> BasePointDetail.builder().id(bp.getId()).name(bp.getAlias()).latitude(bp.getLatitude())
-                        .longitude(bp.getLongitude()).build()).collect(Collectors.toList());
+                .map(bp -> BasePointDetail.builder()
+                        .id(bp.getId())
+                        .name(bp.getAlias())
+                        .latitude(bp.getLatitude())
+                        .longitude(bp.getLongitude())
+                        .build())
+                .collect(Collectors.toList());
+
         savedHouses.forEach(house -> {
-            HouseCreatedEvent event = HouseCreatedEvent.builder().houseId(house.getId()).latitude(house.getLatitude())
-                    .longitude(house.getLongitude()).timestamp(System.currentTimeMillis()).action("CREATED")
-                    .searchCardId(searchCard.getId()).basePoints(basePointDetails).build();
+            HouseCreatedEvent event = HouseCreatedEvent.builder()
+                    .houseId(house.getId())
+                    .latitude(house.getLatitude())
+                    .longitude(house.getLongitude())
+                    .timestamp(System.currentTimeMillis())
+                    .action("CREATED")
+                    .searchCardId(searchCard.getId())
+                    .basePoints(basePointDetails)
+                    .build();
 
             producerService.sendHouseCreatedEvent(event);
         });
-
         return savedHouses.stream().map(House::getId).toList();
     }
-
     public List<HouseListResponse> getHousesBySearchCard(UUID searchCardId, Long userId) {
         searchCardRepository.findByIdAndUserId(searchCardId, userId)
                 .orElseThrow(() -> new IllegalArgumentException("접근 권한이 없거나 존재하지 않는 카드입니다."));

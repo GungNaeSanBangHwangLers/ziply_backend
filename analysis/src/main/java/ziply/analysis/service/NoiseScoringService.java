@@ -1,11 +1,13 @@
 package ziply.analysis.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import ziply.analysis.domain.HouseInfrastructure;
 import ziply.analysis.repository.HouseInfrastructureRepository;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class NoiseScoringService {
@@ -13,58 +15,87 @@ public class NoiseScoringService {
     private final JdbcTemplate jdbcTemplate;
     private final HouseInfrastructureRepository infrastructureRepository;
 
-    // 기획안 기반 상수
-    private static final double BUS_DAY_MAX = 150.0;
-    private static final double BUS_NIGHT_MAX = 15.0;
-    private static final double FOOD_DAY_MAX = 18.0;
-    private static final double BAR_NIGHT_MAX = 8.0;
+    // 이미 집계된 데이터를 사용하므로 기존 MAX 수치 유지 (정류장당 총합 기준)
+    private static final double BUS_DAY_MAX = 1000.0;
+    private static final double BUS_NIGHT_MAX = 100.0;
+    private static final double FOOD_DAY_MAX = 140.0;
     private static final double SCHOOL_MAX = 3.0;
-    private static final double SUBWAY_GROUND_MAX = 3.0;
+    private static final double SUBWAY_MAX = 3.0;
+
+    private static final double SCAN_RADIUS = 0.2;
 
     public int calculateDayNoiseScore(Long houseId, double lat, double lon) {
         HouseInfrastructure infra = getInfra(houseId);
 
-        double trafficNoise = 0.5;
-        double busNorm = calculateBusNorm(lat, lon, "bus_opr_total", BUS_DAY_MAX);
-        double foodNorm = Math.min(infra.getRestaurantCount() / FOOD_DAY_MAX, 1.0);
+        double trafficNoise = estimateTrafficNoise(lat, lon, "day_opr_sum", BUS_DAY_MAX);
+        double busNorm = calculateBusNorm(lat, lon, "day_opr_sum", BUS_DAY_MAX);
+
+        double foodNorm = applyLogScale(infra.getRestaurantCount(), FOOD_DAY_MAX);
         double schoolNorm = Math.min(infra.getSchoolCount() / SCHOOL_MAX, 1.0);
-        double subwayNorm = Math.min(infra.getSubwayCount() / SUBWAY_GROUND_MAX, 1.0);
+        double subwayNorm = Math.min(infra.getSubwayCount() / SUBWAY_MAX, 1.0);
 
-        double finalScore = (0.35 * trafficNoise) + (0.25 * busNorm) +
-                (0.25 * foodNorm) + (0.10 * schoolNorm) +
-                (0.05 * subwayNorm);
+        double totalDanger = (0.35 * trafficNoise) + (0.25 * busNorm) + (0.25 * foodNorm) + (0.10 * schoolNorm) + (0.05 * subwayNorm);
 
-        return (int) Math.round(finalScore * 100);
+        return convertToQuietnessScore(totalDanger);
     }
 
     public int calculateNightNoiseScore(Long houseId, double lat, double lon) {
         HouseInfrastructure infra = getInfra(houseId);
 
-        double busNightNorm = calculateBusNorm(lat, lon, "bus_opr_23", BUS_NIGHT_MAX);
-        double trafficNightNoise = 0.5;
-        double barNorm = Math.min(infra.getRestaurantCount() / BAR_NIGHT_MAX, 1.0);
+        double busNightNorm = calculateBusNorm(lat, lon, "night_opr_sum", BUS_NIGHT_MAX);
+        double trafficNightNoise = estimateTrafficNoise(lat, lon, "night_opr_sum", BUS_NIGHT_MAX);
 
-        double finalScore = (0.35 * busNightNorm) + (0.25 * trafficNightNoise) + (0.40 * barNorm);
+        double barNorm = applyLogScale(infra.getRestaurantCount(), 40.0);
 
-        return (int) Math.round(finalScore * 100);
+        double totalDanger = (0.35 * busNightNorm) + (0.25 * trafficNightNoise) + (0.40 * barNorm);
+
+        return convertToQuietnessScore(totalDanger);
+    }
+
+    private int convertToQuietnessScore(double danger) {
+        double quietness;
+        if (danger <= 0.6) {
+            quietness = 1.0 - (danger * 0.5);
+        } else {
+            quietness = 0.7 - ((danger - 0.6) * 1.5);
+        }
+        int finalScore = (int) Math.round(quietness * 100);
+        return Math.max(15, Math.min(100, finalScore));
+    }
+
+    private double estimateTrafficNoise(double lat, double lon, String column, double max) {
+        String sql = String.format("""
+                    SELECT SUM(s.%s / (POWER(ST_Distance_Sphere(POINT(?, ?), POINT(loc.longitude, loc.latitude)) / 30, 2) + 1))
+                    FROM bus_stop_stats s
+                    JOIN bus_stop_location loc ON s.stops_id = loc.stops_id
+                    WHERE (6371 * acos(cos(radians(?)) * cos(radians(loc.latitude)) 
+                          * cos(radians(loc.longitude) - radians(?)) 
+                          + sin(radians(?)) * sin(radians(loc.latitude)))) <= ?
+                """, column);
+
+        Double impact = jdbcTemplate.queryForObject(sql, Double.class, lon, lat, lat, lon, lat, SCAN_RADIUS);
+        return (impact == null) ? 0.0 : Math.min(impact / (max * 0.5), 1.0);
     }
 
     private double calculateBusNorm(double lat, double lon, String column, double max) {
         String sql = String.format("""
-            SELECT SUM(o.%s) 
-            FROM bus_stop_location s
-            JOIN bus_operations o ON s.stops_id = o.stops_id
-            WHERE (6371 * acos(cos(radians(?)) * cos(radians(s.latitude)) 
-                  * cos(radians(s.longitude) - radians(?)) 
-                  + sin(radians(?)) * sin(radians(s.latitude)))) <= 0.5
-        """, column);
+                    SELECT SUM(s.%s) FROM bus_stop_stats s
+                    JOIN bus_stop_location loc ON s.stops_id = loc.stops_id
+                    WHERE (6371 * acos(cos(radians(?)) * cos(radians(loc.latitude)) 
+                          * cos(radians(loc.longitude) - radians(?)) 
+                          + sin(radians(?)) * sin(radians(loc.latitude)))) <= ?
+                """, column);
 
-        Long count = jdbcTemplate.queryForObject(sql, Long.class, lat, lon, lat);
-        return Math.min(count / max, 1.0);
+        Long count = jdbcTemplate.queryForObject(sql, Long.class, lat, lon, lat, SCAN_RADIUS);
+        return (count == null) ? 0.0 : Math.min(count / max, 1.0);
+    }
+
+    private double applyLogScale(int count, double max) {
+        if (count <= 0) return 0.0;
+        return Math.min(Math.log10(count + 1) / Math.log10(max + 1), 1.0);
     }
 
     private HouseInfrastructure getInfra(Long houseId) {
-        return infrastructureRepository.findByHouseId(houseId)
-                .orElse(new HouseInfrastructure(houseId, 0, 0, 0));
+        return infrastructureRepository.findByHouseId(houseId).orElse(new HouseInfrastructure(houseId, 0, 0, 0));
     }
 }

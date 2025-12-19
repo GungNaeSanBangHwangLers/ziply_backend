@@ -21,11 +21,11 @@ public class HouseInfrastructure {
     private Long id;
 
     @Column(nullable = false, unique = true)
-    private Long houseId; // 집 식별자
+    private Long houseId;
 
-    private int schoolCount;    // 주변 학교 수
-    private int restaurantCount; // 주변 음식점 수
-    private int subwayCount;     // 주변 지하철역 수
+    private int schoolCount;
+    private int restaurantCount;
+    private int subwayCount;
 
     @Builder
     public HouseInfrastructure(Long houseId, int schoolCount, int restaurantCount, int subwayCount) {
