@@ -55,4 +55,20 @@ public class SearchCard {
         this.basePoints.add(basePoint);
         basePoint.assignSearchCard(this);
     }
+
+    public void syncStatus(LocalDate today) {
+        if (this.startDate == null || this.endDate == null) return;
+
+        SearchCardStatus calculatedStatus;
+
+        if (today.isBefore(this.startDate)) {
+            calculatedStatus = SearchCardStatus.PLANNED;
+        } else if (today.isAfter(this.endDate)) {
+            calculatedStatus = SearchCardStatus.COMPLETED;
+        } else {
+            calculatedStatus = SearchCardStatus.IN_PROGRESS;
+        }
+
+        this.status = calculatedStatus;
+    }
 }
