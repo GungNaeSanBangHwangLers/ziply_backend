@@ -5,5 +5,5 @@ import java.util.List;
 public record BasePointAnalysisDto(
         Long basePointId,
         String basePointName,
-        List<HouseAnalysisResultDto> results
+        List<HouseAnalysisDto> results
 ) {}

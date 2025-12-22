@@ -34,9 +34,9 @@ public class NoiseScoringService {
         double schoolNorm = Math.min(infra.getSchoolCount() / SCHOOL_MAX, 1.0);
         double subwayNorm = Math.min(infra.getSubwayCount() / SUBWAY_MAX, 1.0);
 
-        double totalDanger = (0.35 * trafficNoise) + (0.25 * busNorm) + (0.25 * foodNorm) + (0.10 * schoolNorm) + (0.05 * subwayNorm);
+        double totalDayNoise = (0.35 * trafficNoise) + (0.25 * busNorm) + (0.25 * foodNorm) + (0.10 * schoolNorm) + (0.05 * subwayNorm);
 
-        return convertToQuietnessScore(totalDanger);
+        return convertToQuietnessScore(totalDayNoise);
     }
 
     public int calculateNightNoiseScore(Long houseId, double lat, double lon) {
@@ -47,9 +47,9 @@ public class NoiseScoringService {
 
         double barNorm = applyLogScale(infra.getRestaurantCount(), 40.0);
 
-        double totalDanger = (0.35 * busNightNorm) + (0.25 * trafficNightNoise) + (0.40 * barNorm);
+        double totalNightNoise = (0.35 * busNightNorm) + (0.25 * trafficNightNoise) + (0.40 * barNorm);
 
-        return convertToQuietnessScore(totalDanger);
+        return convertToQuietnessScore(totalNightNoise);
     }
 
     private int convertToQuietnessScore(double danger) {

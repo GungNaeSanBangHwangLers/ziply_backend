@@ -16,7 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
 import ziply.analysis.domain.HouseAnalysis;
 import ziply.analysis.dto.response.BasePointAnalysisDto;
-import ziply.analysis.dto.response.HouseAnalysisResultDto;
+import ziply.analysis.dto.response.HouseAnalysisDto;
 import ziply.analysis.dto.response.SearchCardDistanceAnalysis;
 import ziply.analysis.dto.response.SearchCardScoreAnalysis;
 import ziply.analysis.event.HouseCreatedEvent;
@@ -114,7 +114,7 @@ public class RouteAnalysisService {
             List<HouseAnalysis> results = entry.getValue();
             results.sort(Comparator.comparing(HouseAnalysis::getWalkingTimeMin));
             return new BasePointAnalysisDto(entry.getKey(), results.get(0).getBasePointName(),
-                    results.stream().map(HouseAnalysisResultDto::from).toList());
+                    results.stream().map(HouseAnalysisDto::from).toList());
         }).toList();
 
         return new SearchCardDistanceAnalysis(basePointDtos);

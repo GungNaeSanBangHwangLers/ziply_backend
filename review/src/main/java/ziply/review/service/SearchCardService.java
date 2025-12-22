@@ -10,7 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ziply.review.domain.BasePoint;
 import ziply.review.domain.SearchCard;
 import ziply.review.dto.request.SearchCardCreateRequest;
-import ziply.review.dto.response.GeocodingResult;
+import ziply.review.dto.response.GeocodingResultResponse;
 import ziply.review.dto.response.SearchCardResponse;
 import ziply.review.repository.SearchCardRepository;
 
@@ -42,8 +42,7 @@ public class SearchCardService {
                     continue;
                 }
 
-                // 1. GeocodingService를 사용하여 주소를 좌표로 변환
-                GeocodingResult geoResult;
+                GeocodingResultResponse geoResult;
                 try {
                     geoResult = geocodingService.geocodeAddress(address);
                 } catch (RuntimeException e) {

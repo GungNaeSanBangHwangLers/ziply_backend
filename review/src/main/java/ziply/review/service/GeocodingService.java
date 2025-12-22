@@ -6,7 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriComponentsBuilder;
 import ziply.review.dto.request.HouseCreateRequest;
-import ziply.review.dto.response.GeocodingResult;
+import ziply.review.dto.response.GeocodingResultResponse;
 import ziply.review.dto.response.KakaoGeocodeResponse;
 
 @Slf4j
@@ -66,7 +66,7 @@ public class GeocodingService {
     }
 
 
-    public GeocodingResult geocodeAddress(String address) {
+    public GeocodingResultResponse geocodeAddress(String address) {
         log.info("Geocoding: Kakao API로 '{}' 주소의 좌표를 조회합니다.", address);
 
         String uri = UriComponentsBuilder.fromPath("/v2/local/search/address.json").queryParam("query", address).build()
@@ -87,7 +87,7 @@ public class GeocodingService {
 
                 log.info("Geocoding 성공: 주소 '{}', 위도 {}, 경도 {}", address, latitude, longitude);
 
-                return new GeocodingResult(latitude, longitude);
+                return new GeocodingResultResponse(latitude, longitude);
             } else {
                 log.warn("Geocoding 실패: 주소 '{}'에 대한 좌표를 찾을 수 없습니다.", address);
                 throw new IllegalArgumentException("유효하지 않거나 찾을 수 없는 주소입니다: " + address);

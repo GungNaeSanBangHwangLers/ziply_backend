@@ -11,7 +11,7 @@ import ziply.review.domain.House;
 import ziply.review.domain.SearchCard;
 import ziply.review.dto.request.HouseCreateRequest;
 import ziply.review.dto.request.HouseUpdateRequest;
-import ziply.review.dto.response.GeocodingResult;
+import ziply.review.dto.response.GeocodingResultResponse;
 import ziply.review.dto.response.HouseListResponse;
 import ziply.review.event.HouseCreatedEvent;
 import ziply.review.event.HouseCreatedEvent.BasePointDetail;
@@ -114,7 +114,7 @@ public class HouseService {
 
         if (!oldAddress.equals(newAddress)) {
 
-            GeocodingResult geocodingResult = geocodingService.geocodeAddress(newAddress);
+            GeocodingResultResponse geocodingResult = geocodingService.geocodeAddress(newAddress);
 
             List<HouseUpdatedEvent.BasePointDetail> basePoints = house.getSearchCard().getBasePoints().stream()
                     .map(bp -> HouseUpdatedEvent.BasePointDetail.builder()
@@ -162,7 +162,6 @@ public class HouseService {
             reviewProducerService.sendCardDeletedEvent(card.getId());
         }
 
-        // 5. 분석 서비스에 삭제 신호 보냄
         reviewProducerService.sendDeleteSignal(houseId);
     }
 }

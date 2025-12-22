@@ -9,7 +9,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class GeocodingResult {
+public class GeocodingResultResponse {
     private double latitude;
     private double longitude;
 }
