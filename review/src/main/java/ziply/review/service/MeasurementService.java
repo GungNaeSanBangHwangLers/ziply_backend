@@ -1,9 +1,12 @@
 package ziply.review.service;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ziply.review.controller.MeasurementController.MeasurementCardResponse;
 import ziply.review.domain.House;
 import ziply.review.domain.HouseStatus;
 import ziply.review.domain.Measurement;
@@ -54,5 +57,43 @@ public class MeasurementService {
         }
 
         house.updateStatus(HouseStatus.AFTER);
+    }
+
+    public List<MeasurementCardResponse> getMeasurementCardData(Long userId, Long houseId) {
+        House house = houseRepository.findById(houseId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 하우스가 없습니다."));
+        if (!house.getSearchCard().getUserId().equals(userId)) {
+            throw new IllegalStateException("권한이 없습니다.");
+        }
+
+        List<Measurement> measurements = measurementRepository.findAllByHouseIdOrderByRoundAsc(houseId);
+
+        List<MeasurementCardResponse> response = new ArrayList<>();
+        for (int i = 1; i <= 3; i++) {
+            int currentRound = i;
+            Optional<Measurement> data = measurements.stream()
+                    .filter(m -> m.getRound().equals(currentRound))
+                    .findFirst();
+
+            if (data.isPresent()) {
+                Measurement m = data.get();
+                response.add(new MeasurementCardResponse(
+                        currentRound,
+                        currentRound + "차 측정",
+                        true, true,
+                        "방향 측정 완료", "채광 측정 완료",
+                        m.getDirection(), m.getLightLevel()
+                ));
+            } else {
+                response.add(new MeasurementCardResponse(
+                        currentRound,
+                        currentRound + "차 측정",
+                        false, false,
+                        "방향 측정 미완료", "채광 측정 미완료",
+                        null, null
+                ));
+            }
+        }
+        return response;
     }
 }

@@ -32,4 +32,27 @@ public class MeasurementController {
 
         return ResponseEntity.ok().build();
     }
+
+    @Operation(summary = "하우스 측정 카드 데이터 조회", description = "이미지처럼 1~3차 방향/채광 측정 상태를 반환합니다.")
+    @GetMapping("/house/{houseId}/card")
+    public ResponseEntity<List<MeasurementCardResponse>> getMeasurementCard(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long houseId) {
+
+        // 서비스에서 가공된 DTO 리스트를 받아옴
+        List<MeasurementCardResponse> response = measurementService.getMeasurementCardData(userId, houseId);
+        return ResponseEntity.ok(response);
+    }
+
+    // --- 응답 DTO ---
+    public record MeasurementCardResponse(
+            Integer round,
+            String title,           // "1차 측정"
+            boolean isDirectionDone,
+            boolean isLightDone,
+            String directionStatus, // "방향 측정 완료" or "미완료"
+            String lightStatus,     // "채광 측정 완료" or "미완료"
+            Double direction,       // 실제 각도값 (필요시)
+            Double lightLevel       // 실제 채광값 (필요시)
+    ) {}
 }
