@@ -47,19 +47,8 @@ public class House {
         this.longitude = longitude;
     }
 
-    // === [추가] 상태 변경을 위한 Setter 성격의 메서드 ===
     public void updateStatus(HouseStatus status) {
         this.status = status;
-    }
-
-    // === [추가] 연관관계 편의 메서드 (객체 양방향 연결용) ===
-    public void addMeasurement(Measurement measurement) {
-        this.measurements.add(measurement);
-        measurement.assignHouse(this);
-    }
-
-    public void assignSearchCard(SearchCard searchCard) {
-        this.searchCard = searchCard;
     }
 
     public void update(String address, LocalDateTime visitDateTime) {

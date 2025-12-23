@@ -40,11 +40,18 @@ public class MeasurementController {
 
     @Operation(summary = "하우스 측정 데이터 전체 다시 측정 (업데이트)", description = "1~3차 측정 데이터를 리스트로 받아 전체 수정합니다.")
     @PatchMapping("/house/{houseId}/measure/all")
-    public ResponseEntity<Void> reMeasureAll(@AuthenticationPrincipal Long userId,
-                                             @PathVariable Long houseId,
+    public ResponseEntity<Void> reMeasureAll(@AuthenticationPrincipal Long userId, @PathVariable Long houseId,
                                              @RequestBody List<MeasurementRequest> requests) {
 
         measurementService.reMeasure(userId, houseId, requests);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "특정 차수 데이터 삭제", description = "지정한 회차(round)의 데이터만 삭제합니다. 순서는 유지됩니다.")
+    @DeleteMapping("/house/{houseId}/measure/{round}")
+    public ResponseEntity<Void> deleteMeasurement(@AuthenticationPrincipal Long userId, @PathVariable Long houseId,
+                                                  @PathVariable Integer round) {
+        measurementService.deleteMeasurement(userId, houseId, round);
         return ResponseEntity.ok().build();
     }
 }

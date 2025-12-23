@@ -22,17 +22,7 @@ public class MeasurementService {
 
     private final HouseRepository houseRepository;
     private final MeasurementRepository measurementRepository;
-
-    public List<Measurement> findAllByHouseIdOrderByRoundAsc(Long userId, Long houseId) {
-        House house = houseRepository.findById(houseId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 하우스가 없습니다."));
-
-        if (!house.getSearchCard().getUserId().equals(userId)) {
-            throw new IllegalStateException("해당 하우스에 대한 접근 권한이 없습니다.");
-        }
-
-        return measurementRepository.findAllByHouseIdOrderByRoundAsc(houseId);
-    }
+    private final DirectionMapper directionMapper;
 
     @Transactional
     public void addBulkMeasurements(Long userId, Long houseId, List<MeasurementRequest> requests) {
@@ -43,16 +33,32 @@ public class MeasurementService {
             throw new IllegalStateException("권한이 없습니다.");
         }
 
-        for (int i = 0; i < requests.size(); i++) {
-            MeasurementRequest req = requests.get(i);
-            Measurement measurement = Measurement.builder()
-                    .house(house)
-                    .round(i + 1)
-                    .direction(req.direction())
-                    .lightLevel(req.lightLevel())
-                    .build();
+        if (requests.size() > 3) {
+            throw new IllegalArgumentException("측정 데이터는 최대 3개까지만 등록할 수 있습니다.");
+        }
 
-            measurementRepository.save(measurement);
+        for (int i = 0; i < requests.size(); i++) {
+            int currentRound = i + 1;
+            MeasurementRequest req = requests.get(i);
+
+            boolean exists = measurementRepository.existsByHouseIdAndRound(houseId, currentRound);
+
+            if (!exists) {
+                DirectionMapper.DirectionInfo info = directionMapper.getInfo(req.direction());
+
+                Measurement measurement = Measurement.builder()
+                        .house(house)
+                        .round(currentRound)
+                        .direction(req.direction())
+                        .lightLevel(req.lightLevel())
+                        .directionType(info.type())
+                        .directionFeatures(info.features())
+                        .directionPros(info.pros())
+                        .directionCons(info.cons())
+                        .build();
+
+                measurementRepository.save(measurement);
+            }
         }
 
         house.updateStatus(HouseStatus.AFTER);
@@ -102,9 +108,6 @@ public class MeasurementService {
         House house = houseRepository.findById(houseId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 하우스가 없습니다."));
 
-        System.out.println("로그인한 유저 ID (토큰): " + userId);
-        System.out.println("하우스 주인 ID (DB): " + house.getSearchCard().getUserId());
-
         if (!house.getSearchCard().getUserId().equals(userId)) {
             throw new IllegalStateException("권한이 없습니다.");
         }
@@ -115,25 +118,50 @@ public class MeasurementService {
             int currentRound = i + 1;
             MeasurementRequest req = requests.get(i);
 
+            DirectionMapper.DirectionInfo info = directionMapper.getInfo(req.direction());
+
             Optional<Measurement> measurementOpt = existingMeasurements.stream()
-                    .filter(m -> m.getRound() == currentRound)
+                    .filter(m -> m.getRound().equals(currentRound))
                     .findFirst();
 
             if (measurementOpt.isPresent()) {
                 Measurement m = measurementOpt.get();
-                m.updateDirection(req.direction());
                 m.updateLightLevel(req.lightLevel());
+                m.updateDirectionInfo(req.direction(), info.type(), info.features(), info.pros(), info.cons());
             } else {
                 Measurement newMeasurement = Measurement.builder()
                         .house(house)
                         .round(currentRound)
                         .direction(req.direction())
                         .lightLevel(req.lightLevel())
+                        .directionType(info.type())
+                        .directionFeatures(info.features())
+                        .directionPros(info.pros())
+                        .directionCons(info.cons())
                         .build();
                 measurementRepository.save(newMeasurement);
             }
         }
 
         house.updateStatus(HouseStatus.AFTER);
+    }
+
+    @Transactional
+    public void deleteMeasurement(Long userId, Long houseId, Integer round) {
+        House house = houseRepository.findById(houseId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 하우스가 없습니다."));
+
+        if (!house.getSearchCard().getUserId().equals(userId)) {
+            throw new IllegalStateException("삭제 권한이 없습니다.");
+        }
+
+        Measurement target = measurementRepository.findByHouseIdAndRound(houseId, round)
+                .orElseThrow(() -> new IllegalArgumentException(round + "차 측정 데이터가 존재하지 않습니다."));
+
+        measurementRepository.delete(target);
+
+        if (measurementRepository.findAllByHouseIdOrderByRoundAsc(houseId).isEmpty()) {
+            house.updateStatus(HouseStatus.BEFORE);
+        }
     }
 }

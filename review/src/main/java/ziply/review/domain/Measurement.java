@@ -23,34 +23,55 @@ public class Measurement {
     private Double direction;
     private Double lightLevel;
 
+    private String directionType;
+
+    @Column(length = 1000)
+    private String directionFeatures;
+
+    @Column(length = 1000)
+    private String directionPros;
+
+    @Column(length = 1000)
+    private String directionCons;
+
     @Builder
-    public Measurement(House house, Integer round, Double direction, Double lightLevel) {
+    public Measurement(House house, Integer round, Double direction, Double lightLevel, String directionType,
+                       String directionFeatures, String directionPros, String directionCons) {
         this.house = house;
         this.round = round;
         this.direction = direction;
         this.lightLevel = lightLevel;
+        this.directionType = directionType;
+        this.directionFeatures = directionFeatures;
+        this.directionPros = directionPros;
+        this.directionCons = directionCons;
     }
 
-    public void assignHouse(House house) {
-        this.house = house;
-        if (!house.getMeasurements().contains(this)) {
-            house.getMeasurements().add(this);
-        }
+    public void updateDirectionInfo(Double direction, String type, String features, String pros, String cons) {
+        updateDirection(direction);
+        this.directionType = type;
+        this.directionFeatures = features;
+        this.directionPros = pros;
+        this.directionCons = cons;
     }
+
 
     public void updateDirection(Double direction) {
         if (direction != null) {
-            if (direction < 0 || direction > 360) {
-                this.direction = direction % 360;
-            } else {
-                this.direction = direction;
-            }
+            this.direction = (direction < 0 || direction >= 360) ? direction % 360 : direction;
         }
     }
 
     public void updateLightLevel(Double lightLevel) {
         if (lightLevel != null) {
             this.lightLevel = lightLevel;
+        }
+    }
+
+    public void assignHouse(House house) {
+        this.house = house;
+        if (house != null && !house.getMeasurements().contains(this)) {
+            house.getMeasurements().add(this);
         }
     }
 }
