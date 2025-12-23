@@ -2,17 +2,23 @@ package ziply.review.service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ziply.review.domain.House;
 import ziply.review.domain.HouseStatus;
 import ziply.review.domain.Measurement;
+import ziply.review.domain.SearchCard;
 import ziply.review.dto.request.MeasurementRequest;
+import ziply.review.dto.response.DirectionGroupResponse;
 import ziply.review.dto.response.MeasurementCardResponse;
 import ziply.review.repository.HouseRepository;
 import ziply.review.repository.MeasurementRepository;
+import ziply.review.repository.SearchCardRepository;
 
 
 @Service
@@ -20,6 +26,7 @@ import ziply.review.repository.MeasurementRepository;
 @Transactional
 public class MeasurementService {
 
+    private final SearchCardRepository searchCardRepository;
     private final HouseRepository houseRepository;
     private final MeasurementRepository measurementRepository;
     private final DirectionMapper directionMapper;
@@ -163,5 +170,45 @@ public class MeasurementService {
         if (measurementRepository.findAllByHouseIdOrderByRoundAsc(houseId).isEmpty()) {
             house.updateStatus(HouseStatus.BEFORE);
         }
+    }
+
+    @Transactional(readOnly = true)
+    public List<DirectionGroupResponse> getDirectionGroups(Long userId, UUID searchCardId) {
+        SearchCard searchCard = searchCardRepository.findById(searchCardId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 주거탐색카드가 없습니다."));
+
+        System.out.println(">>> 접속 요청 유저 ID: " + userId);
+        System.out.println(">>> 카드 소유 유저 ID: " + searchCard.getUserId());
+
+        if (!searchCard.getUserId().equals(userId)) {
+            // 임시 방편: 만약 테스트를 바로 하고 싶다면 이 throw를 잠시 주석 처리하세요.
+            throw new IllegalStateException("해당 카드에 대한 접근 권한이 없습니다.");
+        }
+        List<Measurement> measurements = measurementRepository.findAllBySearchCardId(searchCardId);
+
+        Map<String, List<Measurement>> groupedByDirection = measurements.stream()
+                .filter(m -> m.getDirectionType() != null)
+                .collect(Collectors.groupingBy(Measurement::getDirectionType));
+
+        return groupedByDirection.entrySet().stream()
+                .map(entry -> {
+                    String type = entry.getKey();
+                    List<Measurement> mList = entry.getValue();
+                    Measurement sample = mList.get(0);
+
+                    List<Long> houseIds = mList.stream()
+                            .map(m -> m.getHouse().getId())
+                            .distinct()
+                            .toList();
+
+                    return new DirectionGroupResponse(
+                            type,
+                            sample.getDirectionFeatures(),
+                            sample.getDirectionPros(),
+                            sample.getDirectionCons(),
+                            houseIds
+                    );
+                })
+                .toList();
     }
 }
