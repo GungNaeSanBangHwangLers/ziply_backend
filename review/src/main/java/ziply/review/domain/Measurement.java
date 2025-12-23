@@ -37,4 +37,20 @@ public class Measurement {
             house.getMeasurements().add(this);
         }
     }
+
+    public void updateDirection(Double direction) {
+        if (direction != null) {
+            if (direction < 0 || direction > 360) {
+                this.direction = direction % 360;
+            } else {
+                this.direction = direction;
+            }
+        }
+    }
+
+    public void updateLightLevel(Double lightLevel) {
+        if (lightLevel != null) {
+            this.lightLevel = lightLevel;
+        }
+    }
 }
