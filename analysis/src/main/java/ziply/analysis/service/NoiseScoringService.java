@@ -15,14 +15,13 @@ public class NoiseScoringService {
     private final JdbcTemplate jdbcTemplate;
     private final HouseInfrastructureRepository infrastructureRepository;
 
-    // 이미 집계된 데이터를 사용하므로 기존 MAX 수치 유지 (정류장당 총합 기준)
     private static final double BUS_DAY_MAX = 1000.0;
     private static final double BUS_NIGHT_MAX = 100.0;
     private static final double FOOD_DAY_MAX = 140.0;
     private static final double SCHOOL_MAX = 3.0;
     private static final double SUBWAY_MAX = 3.0;
 
-    private static final double SCAN_RADIUS = 0.2;
+    private static final double SCAN_RADIUS = 0.2; // 200m
 
     public int calculateDayNoiseScore(Long houseId, double lat, double lon) {
         HouseInfrastructure infra = getInfra(houseId);
@@ -63,30 +62,24 @@ public class NoiseScoringService {
         return Math.max(15, Math.min(100, finalScore));
     }
 
-    private double estimateTrafficNoise(double lat, double lon, String column, double max) {
-        String sql = String.format("""
-                    SELECT SUM(s.%s / (POWER(ST_Distance_Sphere(POINT(?, ?), POINT(loc.longitude, loc.latitude)) / 30, 2) + 1))
-                    FROM bus_stop_stats s
-                    JOIN bus_stop_location loc ON s.stops_id = loc.stops_id
-                    WHERE (6371 * acos(cos(radians(?)) * cos(radians(loc.latitude)) 
-                          * cos(radians(loc.longitude) - radians(?)) 
-                          + sin(radians(?)) * sin(radians(loc.latitude)))) <= ?
-                """, column);
+    private String getNoiseSql(String column) {
+        return "SELECT SUM(s." + column + " / (POWER(ST_Distance(POINT(?, ?), POINT(loc.longitude, loc.latitude)) * 111139 / 30, 2) + 1)) " +
+                "FROM bus_stop_stats s " +
+                "JOIN bus_stop_location loc ON s.stops_id = loc.stops_id " +
+                "WHERE (6371 * acos(cos(radians(?)) * cos(radians(loc.latitude)) " +
+                "      * cos(radians(loc.longitude) - radians(?)) " +
+                "      + sin(radians(?)) * sin(radians(loc.latitude)))) <= ?";
+    }
 
+    private double estimateTrafficNoise(double lat, double lon, String column, double max) {
+        String sql = getNoiseSql(column);
         Double impact = jdbcTemplate.queryForObject(sql, Double.class, lon, lat, lat, lon, lat, SCAN_RADIUS);
         return (impact == null) ? 0.0 : Math.min(impact / (max * 0.5), 1.0);
     }
 
     private double calculateBusNorm(double lat, double lon, String column, double max) {
-        String sql = String.format("""
-                    SELECT SUM(s.%s) FROM bus_stop_stats s
-                    JOIN bus_stop_location loc ON s.stops_id = loc.stops_id
-                    WHERE (6371 * acos(cos(radians(?)) * cos(radians(loc.latitude)) 
-                          * cos(radians(loc.longitude) - radians(?)) 
-                          + sin(radians(?)) * sin(radians(loc.latitude)))) <= ?
-                """, column);
-
-        Long count = jdbcTemplate.queryForObject(sql, Long.class, lat, lon, lat, SCAN_RADIUS);
+        String sql = getNoiseSql(column);
+        Double count = jdbcTemplate.queryForObject(sql, Double.class, lon, lat, lat, lon, lat, SCAN_RADIUS);
         return (count == null) ? 0.0 : Math.min(count / max, 1.0);
     }
 

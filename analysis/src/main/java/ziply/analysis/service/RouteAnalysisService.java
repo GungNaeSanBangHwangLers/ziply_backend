@@ -1,10 +1,11 @@
 package ziply.analysis.service;
 
-import java.util.ArrayList;
+import jakarta.persistence.EntityNotFoundException;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
 import ziply.analysis.domain.HouseAnalysis;
+import ziply.analysis.domain.HouseInfrastructure;
 import ziply.analysis.dto.response.BasePointAnalysisDto;
 import ziply.analysis.dto.response.HouseAnalysisDto;
 import ziply.analysis.dto.response.SearchCardDistanceAnalysis;
@@ -90,8 +92,9 @@ public class RouteAnalysisService {
 
     @Transactional(readOnly = true)
     public SearchCardDistanceAnalysis getSearchCardDistanceAnalysis(UUID searchCardId, Long userId) {
-        Boolean isOwner = org.springframework.web.reactive.function.client.WebClient.create("http://localhost:8082")
-                .get().uri(uriBuilder -> uriBuilder.path("/api/v1/review/card/{searchCardId}/owner-check")
+        Boolean isOwner = org.springframework.web.reactive.function.client.WebClient.create(
+                        "http://review-service:8082").get()
+                .uri(uriBuilder -> uriBuilder.path("/api/v1/review/card/{searchCardId}/owner-check")
                         .queryParam("userId", userId).build(searchCardId)).retrieve().onStatus(HttpStatusCode::isError,
                         clientResponse -> Mono.error(new AccessDeniedException("리뷰 서비스 권한 확인 중 오류가 발생했습니다.")))
                 .bodyToMono(Boolean.class).block();
@@ -121,8 +124,9 @@ public class RouteAnalysisService {
     }
 
     public List<SearchCardScoreAnalysis> getSearchCardScoreAnalysis(UUID searchCardId, Long userId) {
-        Boolean isOwner = org.springframework.web.reactive.function.client.WebClient.create("http://localhost:8082")
-                .get().uri(uriBuilder -> uriBuilder.path("/api/v1/review/card/{searchCardId}/owner-check")
+        Boolean isOwner = org.springframework.web.reactive.function.client.WebClient.create(
+                        "http://review-service:8082").get()
+                .uri(uriBuilder -> uriBuilder.path("/api/v1/review/card/{searchCardId}/owner-check")
                         .queryParam("userId", userId).build(searchCardId)).retrieve().onStatus(HttpStatusCode::isError,
                         clientResponse -> Mono.error(new AccessDeniedException("리뷰 서비스 권한 확인 중 오류가 발생했습니다.")))
                 .bodyToMono(Boolean.class).block();
@@ -137,19 +141,26 @@ public class RouteAnalysisService {
         return allData.stream().collect(Collectors.groupingBy(HouseAnalysis::getHouseId)).entrySet().stream()
                 .map(entry -> {
                     Long houseId = entry.getKey();
+                    String dayMessage = generateScoreDescription(houseId);
                     List<HouseAnalysis> houseDataList = entry.getValue();
 
                     HouseAnalysis first = houseDataList.get(0);
-
                     SearchCardScoreAnalysis dto = new SearchCardScoreAnalysis();
                     dto.setHouseId(houseId);
                     dto.setDayScore(first.getDayScore());
                     dto.setNightScore(first.getNightScore());
                     double avg = (first.getDayScore() + first.getNightScore()) / 2.0;
                     dto.setAvgScore(avg);
-
+                    dto.setMessage(dayMessage);
                     return dto;
                 }).sorted(Comparator.comparing(SearchCardScoreAnalysis::getHouseId)).collect(Collectors.toList());
+    }
+
+    private String generateScoreDescription(Long id) {
+        HouseInfrastructure infra = houseInfrastructureRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("해당 집의 인프라 정보가 없습니다. ID: " + id));
+        String template = "이 점수는 인근 도로 트랙픽, 주간 버스 운행 수, 학교 (%d곳), 지상 지하철역(%d곳), 상권 밀도를 함께 반영해 계산됐어요.";
+        return String.format(template, infra.getSchoolCount(), infra.getSubwayCount());
     }
 
     private record AnalysisPoint(Long id, String name, double lat, double lon) {

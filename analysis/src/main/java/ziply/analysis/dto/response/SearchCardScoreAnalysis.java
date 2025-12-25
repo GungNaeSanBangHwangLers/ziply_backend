@@ -10,4 +10,5 @@ public class SearchCardScoreAnalysis {
     Integer dayScore;
     Integer nightScore;
     Double avgScore;
+    String message;
 }

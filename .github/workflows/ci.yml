@@ -1,4 +1,4 @@
-name: CI
+name: Ziply Full CI/CD
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [ "dev", "main" ]
 
 jobs:
-  build-and-analyze:
+  build-test-deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -32,13 +32,41 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      # (삭제됨) SonarCloud Cache
-
       - name: Make Gradle wrapper executable
         run: chmod +x ./gradlew
 
-      # 전체 멀티모듈 테스트 + JaCoCo 리포트 생성 (빌드 성공 여부 확인용)
+      # 1. 테스트 실행 (여기서 실패하면 배포 중단)
       - name: Run tests with JaCoCo
         run: ./gradlew clean test jacocoTestReport --no-daemon
 
-      # (삭제됨) SonarCloud Analysis
+      # 2. 전 서비스 빌드 (분석 서비스 포함)
+      - name: Build All Services
+        run: ./gradlew build -x test # 테스트는 위에서 했으므로 생략하고 빌드만
+
+      # 3. Azure ACR 로그인
+      - name: Login to Azure Container Registry
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ secrets.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      # 4. 분석 서비스(Analysis) 이미지 빌드 및 푸시
+      # (다른 서비스도 필요하면 여기에 추가 가능)
+      - name: Build and Push Analysis Service
+        run: |
+          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/analysis-service:latest ./analysis
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/analysis-service:latest
+
+      # 5. Azure VM 배포 (SSH 접속)
+      - name: Deploy to Azure VM
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USERNAME }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          script: |
+            cd ~/ziply
+            docker compose pull analysis-service
+            docker compose up -d analysis-service
+            docker image prune -f # 안쓰는 이미지 정리

@@ -1,13 +1,14 @@
 package ziply.analysis.service.bus;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.sql.Statement;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
 import javax.sql.DataSource;
-import java.io.File;
+import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -24,34 +25,28 @@ public class BusOperationBatchService {
 
     private static final int BATCH_SIZE = 5000;
 
-    @Value("${bus.location.data.path1}")
-    private String jsonFilePath;
-
     public void loadBusOperationData() {
-        File file = new File(jsonFilePath);
-        if (!file.exists()) {
-            log.error("Bus operation JSON file not found at: {}", jsonFilePath);
-            return;
-        }
+        // 운행 횟수 데이터는 seoulBusPosition.json에 들어 있음
+        ClassPathResource resource = new ClassPathResource("seoulBusPosition.json");
 
-        try {
-            Map<String, Object> root = objectMapper.readValue(file, Map.class);
+        try (InputStream is = resource.getInputStream()) {
+            Map<String, Object> root = objectMapper.readValue(is, Map.class);
             List<Map<String, Object>> dataList = (List<Map<String, Object>>) root.get("DATA");
 
             if (dataList == null || dataList.isEmpty()) {
-                log.warn("No data found in JSON file: {}", jsonFilePath);
+                log.warn("No bus operation data found in JSON.");
                 return;
             }
 
+            log.info("Starting Batch Insert for Bus Operations. Total data size: {}", dataList.size());
             executeBatchInsert(dataList);
 
         } catch (Exception e) {
-            log.error("Failed to load bus operation data", e);
+            log.error("Failed to load bus operation data.", e);
         }
     }
 
     private void executeBatchInsert(List<Map<String, Object>> dataList) throws SQLException {
-        // 테이블 컬럼명에 맞춰 INSERT 쿼리 작성
         String sql = "INSERT IGNORE INTO bus_operations (stops_id, route_id, bus_opr_day, bus_opr_night) VALUES (?, ?, ?, ?)";
 
         try (Connection conn = dataSource.getConnection()) {
@@ -62,21 +57,22 @@ public class BusOperationBatchService {
 
                 for (Map<String, Object> row : dataList) {
                     try {
-                        // ID 필드 대소문자 방어 로직
-                        String stopsId = getValStr(row, "stops_id");
-                        String routeId = getValStr(row, "rte_id");
+                        String stopsId = getValStr(row, "STOPS_ID");
+                        String routeId = getValStr(row, "RTE_ID");
 
-                        if (stopsId == null || routeId == null) continue;
+                        if (stopsId == null || routeId == null) {
+                            continue;
+                        }
 
                         int dayTotal = 0;
                         for (int h = 6; h <= 22; h++) {
-                            dayTotal += getValInt(row, String.format("bus_opr_%02d", h));
+                            dayTotal += getValInt(row, String.format("BUS_OPR_%02d", h));
                         }
 
                         int nightTotal = 0;
-                        nightTotal += getValInt(row, "bus_opr_23"); // 23시
-                        for (int h = 0; h <= 5; h++) { // 00시 ~ 05시
-                            nightTotal += getValInt(row, String.format("bus_opr_%02d", h));
+                        nightTotal += getValInt(row, "BUS_OPR_23");
+                        for (int h = 0; h <= 5; h++) {
+                            nightTotal += getValInt(row, String.format("BUS_OPR_%02d", h));
                         }
 
                         pstmt.setString(1, stopsId);
@@ -90,16 +86,15 @@ public class BusOperationBatchService {
                         if (count % BATCH_SIZE == 0) {
                             pstmt.executeBatch();
                             conn.commit();
-                            log.info("Bus operation batch committed: {} rows", count);
                         }
                     } catch (Exception e) {
-                        log.warn("Skipping row due to error: {}", e.getMessage());
+                        continue;
                     }
                 }
 
                 pstmt.executeBatch();
                 conn.commit();
-                log.info("Bus operation data loading completed. Total rows: {}", count);
+                log.info("Bus operation data loading completed. Total rows inserted: {}", count);
             } catch (SQLException e) {
                 conn.rollback();
                 throw e;
@@ -107,34 +102,55 @@ public class BusOperationBatchService {
         }
     }
 
-    /**
-     * 키값이 소문자든 대문자든 상관없이 숫자를 가져오는 메서드
-     */
     private int getValInt(Map<String, Object> row, String key) {
-        Object val = row.get(key.toLowerCase());
-        if (val == null) val = row.get(key.toUpperCase());
+        Object val = row.get(key.toUpperCase());
+        if (val == null) {
+            val = row.get(key.toLowerCase());
+        }
         return parseToInt(val);
     }
 
-    /**
-     * 키값이 소문자든 대문자든 상관없이 문자열(ID)을 가져오는 메서드
-     */
     private String getValStr(Map<String, Object> row, String key) {
-        Object val = row.get(key.toLowerCase());
-        if (val == null) val = row.get(key.toUpperCase());
+        Object val = row.get(key.toUpperCase());
+        if (val == null) {
+            val = row.get(key.toLowerCase());
+        }
         return val != null ? val.toString() : null;
     }
 
     private int parseToInt(Object value) {
-        if (value == null) return 0;
+        if (value == null) {
+            return 0;
+        }
         if (value instanceof Number) {
             return ((Number) value).intValue();
         }
         try {
-            // String으로 들어올 경우 "5.0" 같은 소수점 처리 포함
             return (int) Double.parseDouble(value.toString());
         } catch (Exception e) {
             return 0;
+        }
+    }
+
+    public void updateBusStopStats() {
+        String sql = "INSERT INTO bus_stop_stats (stops_id, day_opr_sum, night_opr_sum) " +
+                "SELECT stops_id, SUM(bus_opr_day), SUM(bus_opr_night) " +
+                "FROM bus_operations " +
+                "GROUP BY stops_id " +
+                "ON DUPLICATE KEY UPDATE " +
+                "day_opr_sum = VALUES(day_opr_sum), " +
+                "night_opr_sum = VALUES(night_opr_sum)";
+
+        try (Connection conn = dataSource.getConnection();
+             Statement stmt = conn.createStatement()) {
+
+            long startTime = System.currentTimeMillis();
+            stmt.executeUpdate(sql);
+            long endTime = System.currentTimeMillis();
+
+            log.info("Bus stop statistics calculation completed in {} ms.", (endTime - startTime));
+        } catch (SQLException e) {
+            log.error("Failed to update bus stop statistics", e);
         }
     }
 }
