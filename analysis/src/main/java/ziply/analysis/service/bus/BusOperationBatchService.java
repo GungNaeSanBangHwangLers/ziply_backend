@@ -2,6 +2,7 @@ package ziply.analysis.service.bus;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.Statement;
+import java.util.zip.GZIPInputStream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
@@ -26,15 +27,16 @@ public class BusOperationBatchService {
     private static final int BATCH_SIZE = 5000;
 
     public void loadBusOperationData() {
-        // 운행 횟수 데이터는 seoulBusPosition.json에 들어 있음
-        ClassPathResource resource = new ClassPathResource("seoulBusPosition.json");
+        ClassPathResource resource = new ClassPathResource("seoulBusPosition.json.gz");
 
-        try (InputStream is = resource.getInputStream()) {
-            Map<String, Object> root = objectMapper.readValue(is, Map.class);
+        try (InputStream is = resource.getInputStream();
+             GZIPInputStream gis = new GZIPInputStream(is)) {
+
+            Map<String, Object> root = objectMapper.readValue(gis, Map.class);
             List<Map<String, Object>> dataList = (List<Map<String, Object>>) root.get("DATA");
 
             if (dataList == null || dataList.isEmpty()) {
-                log.warn("No bus operation data found in JSON.");
+                log.warn("No bus operation data found in GZIP JSON.");
                 return;
             }
 
@@ -42,7 +44,7 @@ public class BusOperationBatchService {
             executeBatchInsert(dataList);
 
         } catch (Exception e) {
-            log.error("Failed to load bus operation data.", e);
+            log.error("Failed to load bus operation data from compressed file.", e);
         }
     }
 

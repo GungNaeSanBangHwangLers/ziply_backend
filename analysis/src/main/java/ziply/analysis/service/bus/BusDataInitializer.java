@@ -37,7 +37,6 @@ public class BusDataInitializer implements CommandLineRunner {
         } else {
             log.info("Bus operation data already exists. Skipping load.");
 
-            // [추가] 운행 데이터는 있는데 통계 데이터만 비어있는 경우를 위해 한 번 더 체크
             if (!dataCheckService.isDataAlreadyLoaded("bus_stop_stats")) {
                 log.info("Bus stop statistics are missing. Calculating now...");
                 operationBatchService.updateBusStopStats();
