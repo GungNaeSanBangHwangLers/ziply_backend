@@ -5,15 +5,17 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 import ziply.analysis.domain.HouseAnalysis;
 import ziply.analysis.domain.HouseInfrastructure;
@@ -40,6 +42,10 @@ public class RouteAnalysisService {
     private final KakaoRouteProvider kakaoRouteProvider;
     private final KakaoInfrastructureService kakaoInfrastructureService;
     private final NoiseScoringService noiseScoringService;
+    private final WebClient.Builder webClientBuilder;
+
+    @Value("${services.review.url:http://localhost:8082}")
+    private String reviewServiceUrl;
 
     @Transactional
     public void processHouseCreation(HouseCreatedEvent event) {
@@ -92,17 +98,7 @@ public class RouteAnalysisService {
 
     @Transactional(readOnly = true)
     public SearchCardDistanceAnalysis getSearchCardDistanceAnalysis(UUID searchCardId, Long userId) {
-        Boolean isOwner = org.springframework.web.reactive.function.client.WebClient.create(
-                        "http://review-service:8082").get()
-                .uri(uriBuilder -> uriBuilder.path("/api/v1/review/card/{searchCardId}/owner-check")
-                        .queryParam("userId", userId).build(searchCardId)).retrieve().onStatus(HttpStatusCode::isError,
-                        clientResponse -> Mono.error(new AccessDeniedException("리뷰 서비스 권한 확인 중 오류가 발생했습니다.")))
-                .bodyToMono(Boolean.class).block();
-
-        if (isOwner == null || !isOwner) {
-            log.warn("[Security Audit] Unauthorized card access: user={}, card={}", userId, searchCardId);
-            throw new AccessDeniedException("해당 카드에 대한 접근 권한이 없습니다.");
-        }
+        checkCardOwner(searchCardId, userId);
 
         List<HouseAnalysis> allData = routeAnalysisRepository.findBySearchCardId(searchCardId);
 
@@ -123,18 +119,9 @@ public class RouteAnalysisService {
         return new SearchCardDistanceAnalysis(basePointDtos);
     }
 
+    @Transactional(readOnly = true)
     public List<SearchCardScoreAnalysis> getSearchCardScoreAnalysis(UUID searchCardId, Long userId) {
-        Boolean isOwner = org.springframework.web.reactive.function.client.WebClient.create(
-                        "http://review-service:8082").get()
-                .uri(uriBuilder -> uriBuilder.path("/api/v1/review/card/{searchCardId}/owner-check")
-                        .queryParam("userId", userId).build(searchCardId)).retrieve().onStatus(HttpStatusCode::isError,
-                        clientResponse -> Mono.error(new AccessDeniedException("리뷰 서비스 권한 확인 중 오류가 발생했습니다.")))
-                .bodyToMono(Boolean.class).block();
-
-        if (isOwner == null || !isOwner) {
-            log.warn("[Security Audit] Unauthorized card access: user={}, card={}", userId, searchCardId);
-            throw new AccessDeniedException("해당 카드에 대한 접근 권한이 없습니다.");
-        }
+        checkCardOwner(searchCardId, userId);
 
         List<HouseAnalysis> allData = routeAnalysisRepository.findBySearchCardId(searchCardId);
 
@@ -154,6 +141,28 @@ public class RouteAnalysisService {
                     dto.setMessage(dayMessage);
                     return dto;
                 }).sorted(Comparator.comparing(SearchCardScoreAnalysis::getHouseId)).collect(Collectors.toList());
+    }
+
+    /**
+     * review-service API를 호출하여 해당 카드의 소유주 여부를 확인합니다.
+     */
+    private void checkCardOwner(UUID searchCardId, Long userId) {
+        log.info("[CHECK] Calling review-service to check owner. URL: {}", reviewServiceUrl);
+
+        Boolean isOwner = webClientBuilder.build()
+                .get()
+                .uri(reviewServiceUrl + "/api/v1/review/card/{searchCardId}/owner-check?userId={userId}",
+                        searchCardId, userId)
+                .retrieve()
+                .onStatus(HttpStatusCode::isError, clientResponse ->
+                        Mono.error(new AccessDeniedException("리뷰 서비스 권한 확인 중 오류가 발생했습니다.")))
+                .bodyToMono(Boolean.class)
+                .block();
+
+        if (isOwner == null || !isOwner) {
+            log.warn("[Security Audit] Unauthorized card access: user={}, card={}", userId, searchCardId);
+            throw new AccessDeniedException("해당 카드에 대한 접근 권한이 없습니다.");
+        }
     }
 
     private String generateScoreDescription(Long id) {

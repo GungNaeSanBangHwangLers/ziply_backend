@@ -40,7 +40,7 @@ public class SearchCardController {
         return ResponseEntity.status(HttpStatus.CREATED).body(responseList);
     }
 
-    @Operation(summary = "주거 탐색 카드 생성", description = "새로운 주거 탐색 카드를 생성하고, 관련된 기점(학교, 회사 등) 정보를 함께 저장합니다.")
+    @Operation(summary = "주거 탐색 카드 생성", description = "새로운 주거 탐색 카드를 생성 및 관련된 기점, 집들의 정보를 함께 저장합니다.")
     @PostMapping
     public ResponseEntity<UUID> createSearchCard(
             @Parameter(hidden = true)
