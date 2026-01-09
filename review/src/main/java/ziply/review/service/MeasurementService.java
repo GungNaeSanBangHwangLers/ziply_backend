@@ -211,4 +211,40 @@ public class MeasurementService {
                 })
                 .toList();
     }
+
+    @Transactional(readOnly = true)
+    public List<DirectionGroupResponse> getDirectionGroupsByHouse(Long userId, Long houseId) {
+        // 1. 하우스 존재 확인 및 권한 검증 (하우스 -> 서치카드 -> 유저ID)
+        House house = houseRepository.findById(houseId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 하우스 정보가 없습니다. ID: " + houseId));
+
+        if (!house.getSearchCard().getUserId().equals(userId)) {
+            throw new IllegalStateException("해당 하우스 정보에 대한 접근 권한이 없습니다.");
+        }
+
+        // 2. 해당 houseId로 등록된 모든 측정 데이터 조회
+        List<Measurement> measurements = measurementRepository.findAllByHouseId(houseId);
+
+        // 3. 향(DirectionType)별로 그룹화
+        Map<String, List<Measurement>> groupedByDirection = measurements.stream()
+                .filter(m -> m.getDirectionType() != null)
+                .collect(Collectors.groupingBy(Measurement::getDirectionType));
+
+        // 4. 결과 DTO 생성
+        return groupedByDirection.entrySet().stream()
+                .map(entry -> {
+                    String type = entry.getKey();
+                    List<Measurement> mList = entry.getValue();
+                    Measurement sample = mList.get(0); // 공통 정보를 추출할 샘플
+
+                    return new DirectionGroupResponse(
+                            type,
+                            sample.getDirectionFeatures(),
+                            sample.getDirectionPros(),
+                            sample.getDirectionCons(),
+                            List.of(houseId) // 현재 요청받은 houseId만 포함
+                    );
+                })
+                .toList();
+    }
 }

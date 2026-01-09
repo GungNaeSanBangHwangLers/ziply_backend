@@ -58,11 +58,18 @@ public class MeasurementController {
     }
 
     @Operation(summary = "향별 하우스 그룹화 조회", description = "특정 주거탐색카드 내의 하우스들을 향별로 묶어 하우스 ID 리스트와 해당 향의 특징/장단점을 반환합니다.")
-    @GetMapping("/direction/{searchCardId}")
-    public ResponseEntity<List<DirectionGroupResponse>> getDirectionGroups(
-            @AuthenticationPrincipal Long userId,
-            @PathVariable UUID searchCardId) {
-
+    @GetMapping("/card/{searchCardId}")
+    public ResponseEntity<List<DirectionGroupResponse>> getDirectionGroups(@AuthenticationPrincipal Long userId,
+                                                                           @PathVariable UUID searchCardId) {
         return ResponseEntity.ok(measurementService.getDirectionGroups(userId, searchCardId));
+    }
+
+    @Operation(summary = "하우스별 향 정보 조회", description = "특정 하우스 ID를 기반으로 해당 집의 향 정보와 특징/장단점을 반환합니다.")
+    @GetMapping("/house/{houseId}")
+    public ResponseEntity<List<DirectionGroupResponse>> getDirectionGroupsByHouse(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long houseId) {
+
+        return ResponseEntity.ok(measurementService.getDirectionGroupsByHouse(userId, houseId));
     }
 }

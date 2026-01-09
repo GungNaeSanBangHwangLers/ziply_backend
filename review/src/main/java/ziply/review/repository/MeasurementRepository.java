@@ -20,4 +20,6 @@ public interface MeasurementRepository extends JpaRepository<Measurement, Long> 
 
     @Query("SELECT m FROM Measurement m JOIN m.house h WHERE h.searchCard.id = :searchCardId")
     List<Measurement> findAllBySearchCardId(@Param("searchCardId") UUID searchCardId);
+
+    List<Measurement> findAllByHouseId(Long houseId);
 }
