@@ -1,6 +1,7 @@
 package ziply.review.service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -13,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ziply.review.domain.BasePoint;
 import ziply.review.domain.House;
 import ziply.review.domain.SearchCard;
+import ziply.review.dto.request.HouseCreateRequest;
 import ziply.review.dto.request.SearchCardCreateRequest;
 import ziply.review.dto.response.GeocodingResultResponse;
 import ziply.review.dto.response.SearchCardResponse;
@@ -34,71 +36,72 @@ public class SearchCardService {
 
     @Transactional
     public UUID createSearchCard(Long userId, SearchCardCreateRequest request) {
-        log.info("[INTEGRATED] 통합 카드 생성 시작 - User: {}, BaseAddress: {}", userId, request.getBasePointAddress());
+        // 타입 에러 방지를 위해 변수 타입을 명확히 하거나 var 사용
+        var houseRequests = request.getHouses() != null ? request.getHouses() : new ArrayList<SearchCardCreateRequest.HouseCreateRequest>();
 
-        SearchCard searchCard = new SearchCard(
-                userId,
-                "새로운 탐색 카드",
-                LocalDate.now(),
-                null
-        );
+        // 1. 집 엔티티 리스트 준비 (지오코딩 포함)
+        List<House> pendingHouses = houseRequests.stream()
+                .map(hReq -> {
+                    try {
+                        GeocodingResultResponse geo = geocodingService.geocodeAddress(hReq.getAddress());
+                        return House.builder()
+                                .address(hReq.getAddress())
+                                .visitDateTime(hReq.getVisitDateTime())
+                                .latitude(geo.getLatitude())
+                                .longitude(geo.getLongitude())
+                                .build();
+                    } catch (Exception e) {
+                        log.warn("[INTEGRATED] 집 지오코딩 실패: {}", hReq.getAddress());
+                        return null;
+                    }
+                })
+                .filter(Objects::nonNull)
+                .toList();
 
+        // 2. 날짜 계산
+        LocalDate calculatedStart = LocalDate.now();
+        LocalDate calculatedEnd = null;
+
+        if (!pendingHouses.isEmpty()) {
+            List<LocalDateTime> dateTimes = pendingHouses.stream()
+                    .map(House::getVisitDateTime)
+                    .filter(Objects::nonNull)
+                    .toList();
+
+            if (!dateTimes.isEmpty()) {
+                calculatedStart = dateTimes.stream().min(LocalDateTime::compareTo).get().toLocalDate();
+                calculatedEnd = dateTimes.stream().max(LocalDateTime::compareTo).get().toLocalDate();
+            }
+        }
+
+        // 3. 카드 생성 및 저장
+        SearchCard searchCard = new SearchCard(userId, "새로운 탐색 카드", calculatedStart, calculatedEnd);
+
+        // 기점 주소 처리
         if (request.getBasePointAddress() != null && !request.getBasePointAddress().isBlank()) {
             try {
                 GeocodingResultResponse geoResult = geocodingService.geocodeAddress(request.getBasePointAddress());
-                searchCard.addBasePoint(new BasePoint(
-                        "기점",
-                        request.getBasePointAddress(),
-                        geoResult.getLatitude(),
-                        geoResult.getLongitude()
-                ));
+                searchCard.addBasePoint(new BasePoint("기점", request.getBasePointAddress(), geoResult.getLatitude(), geoResult.getLongitude()));
             } catch (Exception e) {
-                log.error("[INTEGRATED] 기점 지오코딩 실패: {} - 사유: {}", request.getBasePointAddress(), e.getMessage());
+                log.error("[INTEGRATED] 기점 지오코딩 실패");
             }
         }
 
         SearchCard savedCard = searchCardRepository.save(searchCard);
 
-        List<House> savedHouses = new ArrayList<>();
-        if (request.getHouses() != null && !request.getHouses().isEmpty()) {
-            List<House> houseList = request.getHouses().stream()
-                    .map(hReq -> {
-                        try {
-                            log.info("[INTEGRATED] 집 지오코딩 시도: {}", hReq.getAddress());
-                            GeocodingResultResponse geo = geocodingService.geocodeAddress(hReq.getAddress());
-
-                            hReq.setLatitude(geo.getLatitude());
-                            hReq.setLongitude(geo.getLongitude());
-
-                            return House.builder()
-                                    .searchCard(savedCard)
-                                    .address(hReq.getAddress())
-                                    .visitDateTime(hReq.getVisitDateTime())
-                                    .latitude(geo.getLatitude())
-                                    .longitude(geo.getLongitude())
-                                    .build();
-                        } catch (Exception e) {
-                            log.warn("[INTEGRATED] 집 지오코딩 실패 (건너뜀): {} - 사유: {}", hReq.getAddress(), e.getMessage());
-                            return null;
-                        }
-                    })
-                    .filter(Objects::nonNull)
-                    .toList();
-
-            if (!houseList.isEmpty()) {
-                savedHouses = houseRepository.saveAll(houseList);
-                log.info("[INTEGRATED] {}개의 집 정보 저장 완료", savedHouses.size());
-            }
+        // 4. 연관관계 매핑 및 집 저장
+        for (House house : pendingHouses) {
+            house.setSearchCard(savedCard);
         }
+        List<House> savedHouses = houseRepository.saveAll(pendingHouses);
 
+        // 5. 이벤트 발행
         if (!savedHouses.isEmpty()) {
             sendHouseCreatedEvents(savedCard, savedHouses);
         }
 
-        log.info("[INTEGRATED] 모든 프로세스 완료. CardID: {}", savedCard.getId());
         return savedCard.getId();
     }
-
     private void sendHouseCreatedEvents(SearchCard card, List<House> houses) {
         List<BasePointDetail> basePointDetails = card.getBasePoints().stream()
                 .map(bp -> BasePointDetail.builder()
