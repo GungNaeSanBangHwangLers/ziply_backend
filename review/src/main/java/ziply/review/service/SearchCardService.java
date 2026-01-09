@@ -1,5 +1,6 @@
 package ziply.review.service;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -33,42 +34,39 @@ public class SearchCardService {
 
     @Transactional
     public UUID createSearchCard(Long userId, SearchCardCreateRequest request) {
-        log.info("[INTEGRATED] 통합 카드 생성 시작 - User: {}, Title: {}", userId, request.getTitle());
+        log.info("[INTEGRATED] 통합 카드 생성 시작 - User: {}, BaseAddress: {}", userId, request.getBasePointAddress());
 
-        // 1. SearchCard 기본 정보 생성
-        SearchCard searchCard = new SearchCard(userId, request.getTitle(), request.getStartDate(), request.getEndDate());
+        SearchCard searchCard = new SearchCard(
+                userId,
+                "새로운 탐색 카드",
+                LocalDate.now(),
+                null
+        );
 
-        // 2. 기점(BasePoint) 지오코딩 및 추가
-        if (request.getBasePoints() != null) {
-            for (var bpDto : request.getBasePoints()) {
-                try {
-                    // String address를 인자로 받는 메서드 사용
-                    GeocodingResultResponse geoResult = geocodingService.geocodeAddress(bpDto.getAddress());
-                    searchCard.addBasePoint(new BasePoint(
-                            bpDto.getAlias(),
-                            bpDto.getAddress(),
-                            geoResult.getLatitude(),
-                            geoResult.getLongitude()
-                    ));
-                } catch (RuntimeException e) {
-                    log.warn("[INTEGRATED] 기점 지오코딩 실패 (건너뜀): {}", bpDto.getAddress());
-                }
+        if (request.getBasePointAddress() != null && !request.getBasePointAddress().isBlank()) {
+            try {
+                GeocodingResultResponse geoResult = geocodingService.geocodeAddress(request.getBasePointAddress());
+                searchCard.addBasePoint(new BasePoint(
+                        "기점",
+                        request.getBasePointAddress(),
+                        geoResult.getLatitude(),
+                        geoResult.getLongitude()
+                ));
+            } catch (Exception e) {
+                log.error("[INTEGRATED] 기점 지오코딩 실패: {} - 사유: {}", request.getBasePointAddress(), e.getMessage());
             }
         }
 
-        // 카드와 기점 정보를 먼저 DB에 저장
         SearchCard savedCard = searchCardRepository.save(searchCard);
 
-        // 3. 집(House) 리스트 처리 및 저장
         List<House> savedHouses = new ArrayList<>();
         if (request.getHouses() != null && !request.getHouses().isEmpty()) {
             List<House> houseList = request.getHouses().stream()
                     .map(hReq -> {
                         try {
-                            // 기존의 String 인자 메서드를 활용하여 좌표를 가져옴
+                            log.info("[INTEGRATED] 집 지오코딩 시도: {}", hReq.getAddress());
                             GeocodingResultResponse geo = geocodingService.geocodeAddress(hReq.getAddress());
 
-                            // DTO에 좌표 세팅 (Kafka 이벤트나 이후 로직을 위해 필요)
                             hReq.setLatitude(geo.getLatitude());
                             hReq.setLongitude(geo.getLongitude());
 
@@ -79,8 +77,8 @@ public class SearchCardService {
                                     .latitude(geo.getLatitude())
                                     .longitude(geo.getLongitude())
                                     .build();
-                        } catch (RuntimeException e) {
-                            log.warn("[INTEGRATED] 집 지오코딩 실패 (건너뜀): {}", hReq.getAddress());
+                        } catch (Exception e) {
+                            log.warn("[INTEGRATED] 집 지오코딩 실패 (건너뜀): {} - 사유: {}", hReq.getAddress(), e.getMessage());
                             return null;
                         }
                     })
@@ -93,7 +91,6 @@ public class SearchCardService {
             }
         }
 
-        // 4. Kafka 이벤트 발행
         if (!savedHouses.isEmpty()) {
             sendHouseCreatedEvents(savedCard, savedHouses);
         }

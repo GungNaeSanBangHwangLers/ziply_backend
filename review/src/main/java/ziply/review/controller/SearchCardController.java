@@ -32,9 +32,7 @@ public class SearchCardController {
     @Operation(summary = "주거 탐색 카드 전체 조회", description = "사용자의 주거 탐색 카드를 조회하고, 불러옵니다.")
     @GetMapping
     public ResponseEntity<List<SearchCardResponse>> readSearchCard(
-            @Parameter(hidden = true)
-            @AuthenticationPrincipal Long userId
-    ) {
+            @Parameter(hidden = true) @AuthenticationPrincipal Long userId) {
         List<SearchCardResponse> responseList = searchCardService.getSearchCards(userId);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(responseList);
@@ -42,19 +40,14 @@ public class SearchCardController {
 
     @Operation(summary = "주거 탐색 카드 생성", description = "새로운 주거 탐색 카드를 생성 및 관련된 기점, 집들의 정보를 함께 저장합니다.")
     @PostMapping
-    public ResponseEntity<UUID> createSearchCard(
-            @Parameter(hidden = true)
-            @AuthenticationPrincipal Long userId,
-            @RequestBody @Valid SearchCardCreateRequest request
-    ) {
+    public ResponseEntity<UUID> createSearchCard(@Parameter(hidden = true) @AuthenticationPrincipal Long userId,
+                                                 @RequestBody @Valid SearchCardCreateRequest request) {
         UUID cardId = searchCardService.createSearchCard(userId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(cardId);
     }
 
     @GetMapping("/{searchCardId}/owner-check")
-    public ResponseEntity<Boolean> checkOwner(
-            @PathVariable UUID searchCardId,
-            @RequestParam Long userId) {
+    public ResponseEntity<Boolean> checkOwner(@PathVariable UUID searchCardId, @RequestParam Long userId) {
         boolean isOwner = searchCardService.isCardOwner(searchCardId, userId);
         return ResponseEntity.ok(isOwner);
     }
