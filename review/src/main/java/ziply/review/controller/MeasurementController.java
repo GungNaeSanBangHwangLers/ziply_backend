@@ -10,6 +10,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import ziply.review.dto.request.MeasurementRequest;
 import ziply.review.dto.response.DirectionGroupResponse;
+import ziply.review.dto.response.HouseSunlightResponse;
 import ziply.review.dto.response.MeasurementCardResponse;
 import ziply.review.service.MeasurementService;
 
@@ -21,6 +22,16 @@ import ziply.review.service.MeasurementService;
 public class MeasurementController {
 
     private final MeasurementService measurementService;
+
+    @Operation(summary = "탐색 카드별 평균 채광 점수 조회", description = "특정 탐색 카드에 속한 모든 하우스의 채광 측정값 평균 점수를 반환합니다.")
+    @GetMapping("/score/{cardId}")
+    public ResponseEntity<List<HouseSunlightResponse>> getCardAverageScore(
+            @PathVariable UUID cardId,
+            @AuthenticationPrincipal Long userId) {
+
+        List<HouseSunlightResponse> response = measurementService.getHouseSunlightScoresByCard(cardId, userId);
+        return ResponseEntity.ok(response);
+    }
 
     @Operation(summary = "하우스 측정 데이터 저장 (측정하기)", description = "방향(0~360도)과 채광 수치를 저장하고, 하우스 상태를 '탐색후'로 변경합니다.")
     @PostMapping("/{houseId}/measure")

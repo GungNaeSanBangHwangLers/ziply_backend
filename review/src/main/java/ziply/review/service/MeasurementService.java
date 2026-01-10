@@ -1,8 +1,10 @@
 package ziply.review.service;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -15,7 +17,9 @@ import ziply.review.domain.Measurement;
 import ziply.review.domain.SearchCard;
 import ziply.review.dto.request.MeasurementRequest;
 import ziply.review.dto.response.DirectionGroupResponse;
+import ziply.review.dto.response.HouseSunlightResponse;
 import ziply.review.dto.response.MeasurementCardResponse;
+import ziply.review.dto.response.SearchCardResponse;
 import ziply.review.repository.HouseRepository;
 import ziply.review.repository.MeasurementRepository;
 import ziply.review.repository.SearchCardRepository;
@@ -26,6 +30,7 @@ import ziply.review.repository.SearchCardRepository;
 @Transactional
 public class MeasurementService {
 
+    private static final double MAX_LUX_STANDARD = 2500.0;
     private final SearchCardRepository searchCardRepository;
     private final HouseRepository houseRepository;
     private final MeasurementRepository measurementRepository;
@@ -51,24 +56,51 @@ public class MeasurementService {
             boolean exists = measurementRepository.existsByHouseIdAndRound(houseId, currentRound);
 
             if (!exists) {
+                Double representativeLux = calculateRepresentativeLux(req.lightLevel());
+
                 DirectionMapper.DirectionInfo info = directionMapper.getInfo(req.direction());
 
-                Measurement measurement = Measurement.builder()
-                        .house(house)
-                        .round(currentRound)
-                        .direction(req.direction())
-                        .lightLevel(req.lightLevel())
-                        .directionType(info.type())
-                        .directionFeatures(info.features())
-                        .directionPros(info.pros())
-                        .directionCons(info.cons())
+                Measurement measurement = Measurement.builder().house(house).round(currentRound)
+                        .direction(req.direction()).lightLevel(representativeLux).directionType(info.type())
+                        .directionFeatures(info.features()).directionPros(info.pros()).directionCons(info.cons())
                         .build();
 
                 measurementRepository.save(measurement);
             }
         }
+    }
 
-        house.updateStatus(HouseStatus.AFTER);
+    private Double calculateRepresentativeLux(List<Double> rawLuxValues) {
+        if (rawLuxValues == null || rawLuxValues.isEmpty()) {
+            return null;
+        }
+
+        List<Double> validValues = new ArrayList<>();
+
+        for (int i = 0; i < rawLuxValues.size(); i++) {
+            double current = rawLuxValues.get(i);
+
+            if (i == 0) {
+                validValues.add(current);
+                continue;
+            }
+
+            double prev = rawLuxValues.get(i - 1);
+
+            boolean isDoubled = current >= prev * 2;
+            boolean isSuddenChange = Math.abs(current - prev) >= 300;
+
+            if (!isDoubled && !isSuddenChange) {
+                validValues.add(current);
+            }
+        }
+
+        if (validValues.size() >= 3) {
+            Collections.sort(validValues);
+            return validValues.get(validValues.size() / 2);
+        }
+
+        return null;
     }
 
     public List<MeasurementCardResponse> getMeasurementCardData(Long userId, Long houseId) {
@@ -84,27 +116,16 @@ public class MeasurementService {
         List<MeasurementCardResponse> response = new ArrayList<>();
         for (int i = 1; i <= 3; i++) {
             int currentRound = i;
-            Optional<Measurement> data = measurements.stream()
-                    .filter(m -> m.getRound().equals(currentRound))
+            Optional<Measurement> data = measurements.stream().filter(m -> m.getRound().equals(currentRound))
                     .findFirst();
 
             if (data.isPresent()) {
                 Measurement m = data.get();
-                response.add(new MeasurementCardResponse(
-                        currentRound,
-                        currentRound + "차 측정",
-                        true, true,
-                        "방향 측정 완료", "채광 측정 완료",
-                        m.getDirection(), m.getLightLevel()
-                ));
+                response.add(new MeasurementCardResponse(currentRound, currentRound + "차 측정", true, true, "방향 측정 완료",
+                        "채광 측정 완료", m.getDirection(), m.getLightLevel()));
             } else {
-                response.add(new MeasurementCardResponse(
-                        currentRound,
-                        currentRound + "차 측정",
-                        false, false,
-                        "방향 측정 미완료", "채광 측정 미완료",
-                        null, null
-                ));
+                response.add(new MeasurementCardResponse(currentRound, currentRound + "차 측정", false, false, "방향 측정 미완료",
+                        "채광 측정 미완료", null, null));
             }
         }
         return response;
@@ -125,26 +146,21 @@ public class MeasurementService {
             int currentRound = i + 1;
             MeasurementRequest req = requests.get(i);
 
+            Double representativeLux = calculateRepresentativeLux(req.lightLevel());
+
             DirectionMapper.DirectionInfo info = directionMapper.getInfo(req.direction());
 
             Optional<Measurement> measurementOpt = existingMeasurements.stream()
-                    .filter(m -> m.getRound().equals(currentRound))
-                    .findFirst();
+                    .filter(m -> m.getRound().equals(currentRound)).findFirst();
 
             if (measurementOpt.isPresent()) {
                 Measurement m = measurementOpt.get();
-                m.updateLightLevel(req.lightLevel());
+                m.updateLightLevel(representativeLux);
                 m.updateDirectionInfo(req.direction(), info.type(), info.features(), info.pros(), info.cons());
             } else {
-                Measurement newMeasurement = Measurement.builder()
-                        .house(house)
-                        .round(currentRound)
-                        .direction(req.direction())
-                        .lightLevel(req.lightLevel())
-                        .directionType(info.type())
-                        .directionFeatures(info.features())
-                        .directionPros(info.pros())
-                        .directionCons(info.cons())
+                Measurement newMeasurement = Measurement.builder().house(house).round(currentRound)
+                        .direction(req.direction()).lightLevel(representativeLux).directionType(info.type())
+                        .directionFeatures(info.features()).directionPros(info.pros()).directionCons(info.cons())
                         .build();
                 measurementRepository.save(newMeasurement);
             }
@@ -190,31 +206,20 @@ public class MeasurementService {
                 .filter(m -> m.getDirectionType() != null)
                 .collect(Collectors.groupingBy(Measurement::getDirectionType));
 
-        return groupedByDirection.entrySet().stream()
-                .map(entry -> {
-                    String type = entry.getKey();
-                    List<Measurement> mList = entry.getValue();
-                    Measurement sample = mList.get(0);
+        return groupedByDirection.entrySet().stream().map(entry -> {
+            String type = entry.getKey();
+            List<Measurement> mList = entry.getValue();
+            Measurement sample = mList.get(0);
 
-                    List<Long> houseIds = mList.stream()
-                            .map(m -> m.getHouse().getId())
-                            .distinct()
-                            .toList();
+            List<Long> houseIds = mList.stream().map(m -> m.getHouse().getId()).distinct().toList();
 
-                    return new DirectionGroupResponse(
-                            type,
-                            sample.getDirectionFeatures(),
-                            sample.getDirectionPros(),
-                            sample.getDirectionCons(),
-                            houseIds
-                    );
-                })
-                .toList();
+            return new DirectionGroupResponse(type, sample.getDirectionFeatures(), sample.getDirectionPros(),
+                    sample.getDirectionCons(), houseIds);
+        }).toList();
     }
 
     @Transactional(readOnly = true)
     public List<DirectionGroupResponse> getDirectionGroupsByHouse(Long userId, Long houseId) {
-        // 1. 하우스 존재 확인 및 권한 검증 (하우스 -> 서치카드 -> 유저ID)
         House house = houseRepository.findById(houseId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 하우스 정보가 없습니다. ID: " + houseId));
 
@@ -222,28 +227,48 @@ public class MeasurementService {
             throw new IllegalStateException("해당 하우스 정보에 대한 접근 권한이 없습니다.");
         }
 
-        // 2. 해당 houseId로 등록된 모든 측정 데이터 조회
         List<Measurement> measurements = measurementRepository.findAllByHouseId(houseId);
 
-        // 3. 향(DirectionType)별로 그룹화
         Map<String, List<Measurement>> groupedByDirection = measurements.stream()
                 .filter(m -> m.getDirectionType() != null)
                 .collect(Collectors.groupingBy(Measurement::getDirectionType));
 
-        // 4. 결과 DTO 생성
-        return groupedByDirection.entrySet().stream()
-                .map(entry -> {
-                    String type = entry.getKey();
-                    List<Measurement> mList = entry.getValue();
-                    Measurement sample = mList.get(0); // 공통 정보를 추출할 샘플
+        return groupedByDirection.entrySet().stream().map(entry -> {
+            String type = entry.getKey();
+            List<Measurement> mList = entry.getValue();
+            Measurement sample = mList.get(0);
 
-                    return new DirectionGroupResponse(
-                            type,
-                            sample.getDirectionFeatures(),
-                            sample.getDirectionPros(),
-                            sample.getDirectionCons(),
-                            List.of(houseId) // 현재 요청받은 houseId만 포함
-                    );
+            return new DirectionGroupResponse(type, sample.getDirectionFeatures(), sample.getDirectionPros(),
+                    sample.getDirectionCons(), List.of(houseId)
+            );
+        }).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<HouseSunlightResponse> getHouseSunlightScoresByCard(UUID cardId, Long userId) {
+        List<Measurement> allMeasurements = measurementRepository.findAllBySearchCardId(cardId);
+
+        if (allMeasurements.isEmpty()) {
+            return List.of();
+        }
+
+        return allMeasurements.stream()
+                .collect(Collectors.groupingBy(m -> m.getHouse().getId())) // House ID로 그룹핑
+                .entrySet().stream()
+                .map(entry -> {
+                    Long houseId = entry.getKey();
+                    List<Measurement> houseMeasurements = entry.getValue();
+
+                    double averageLux = houseMeasurements.stream()
+                            .map(Measurement::getLightLevel)
+                            .filter(lux -> lux != null && lux > 0.0)
+                            .mapToDouble(Double::doubleValue)
+                            .average()
+                            .orElse(0.0);
+
+                    int score = (int) Math.min(Math.round((averageLux / 2500.0) * 100), 100);
+
+                    return new HouseSunlightResponse(houseId, score);
                 })
                 .toList();
     }

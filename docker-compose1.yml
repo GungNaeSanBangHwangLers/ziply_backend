@@ -73,6 +73,7 @@ services:
       - ziply-mysql
       - kafka
     environment:
+      - SERVER_PORT=8080
       - SPRING_PROFILES_ACTIVE=prod
       - JWT_SECRET=aD93kLmT82vGrPq46WsYtN19BbFzQx7KpV21Rw9TfGh32Nd7HcLm92Qp3XvFt5
       - SPRING_DATASOURCE_URL=jdbc:mysql://ziply-mysql:3306/ziply_review?createDatabaseIfNotExist=true

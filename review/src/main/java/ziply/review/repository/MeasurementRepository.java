@@ -22,4 +22,6 @@ public interface MeasurementRepository extends JpaRepository<Measurement, Long> 
     List<Measurement> findAllBySearchCardId(@Param("searchCardId") UUID searchCardId);
 
     List<Measurement> findAllByHouseId(Long houseId);
+
+    List<Measurement> findByHouseId(Long houseId);
 }
