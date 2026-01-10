@@ -1,11 +1,9 @@
 package ziply.analysis.service;
 
-import jakarta.persistence.EntityNotFoundException;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +16,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 import ziply.analysis.domain.HouseAnalysis;
-import ziply.analysis.domain.HouseInfrastructure;
 import ziply.analysis.dto.response.BasePointAnalysisDto;
 import ziply.analysis.dto.response.HouseAnalysisDto;
 import ziply.analysis.dto.response.SearchCardDistanceAnalysis;
@@ -44,7 +41,7 @@ public class RouteAnalysisService {
     private final NoiseScoringService noiseScoringService;
     private final WebClient.Builder webClientBuilder;
 
-    @Value("${services.review.url:http://localhost:8082}")
+    @Value("${services.review.url:http://localhost:8080}")
     private String reviewServiceUrl;
 
     @Transactional
@@ -125,27 +122,32 @@ public class RouteAnalysisService {
 
         List<HouseAnalysis> allData = routeAnalysisRepository.findBySearchCardId(searchCardId);
 
-        return allData.stream().collect(Collectors.groupingBy(HouseAnalysis::getHouseId)).entrySet().stream()
+        return allData.stream()
+                .collect(Collectors.groupingBy(HouseAnalysis::getHouseId))
+                .entrySet().stream()
                 .map(entry -> {
                     Long houseId = entry.getKey();
-                    String dayMessage = generateScoreDescription(houseId);
-                    List<HouseAnalysis> houseDataList = entry.getValue();
 
+                    String dayMessage = generateScoreDescription(houseId);
+
+                    List<HouseAnalysis> houseDataList = entry.getValue();
                     HouseAnalysis first = houseDataList.get(0);
+
                     SearchCardScoreAnalysis dto = new SearchCardScoreAnalysis();
                     dto.setHouseId(houseId);
                     dto.setDayScore(first.getDayScore());
                     dto.setNightScore(first.getNightScore());
-                    double avg = (first.getDayScore() + first.getNightScore()) / 2.0;
+
+                    double avg = (first.getDayScore() + (double)first.getNightScore()) / 2.0;
                     dto.setAvgScore(avg);
                     dto.setMessage(dayMessage);
+
                     return dto;
-                }).sorted(Comparator.comparing(SearchCardScoreAnalysis::getHouseId)).collect(Collectors.toList());
+                })
+                .sorted(Comparator.comparing(SearchCardScoreAnalysis::getHouseId))
+                .collect(Collectors.toList());
     }
 
-    /**
-     * review-service API를 호출하여 해당 카드의 소유주 여부를 확인합니다.
-     */
     private void checkCardOwner(UUID searchCardId, Long userId) {
         log.info("[CHECK] Calling review-service to check owner. URL: {}", reviewServiceUrl);
 
@@ -165,11 +167,13 @@ public class RouteAnalysisService {
         }
     }
 
-    private String generateScoreDescription(Long id) {
-        HouseInfrastructure infra = houseInfrastructureRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("해당 집의 인프라 정보가 없습니다. ID: " + id));
-        String template = "이 점수는 인근 도로 트랙픽, 주간 버스 운행 수, 학교 (%d곳), 지상 지하철역(%d곳), 상권 밀도를 함께 반영해 계산됐어요.";
-        return String.format(template, infra.getSchoolCount(), infra.getSubwayCount());
+    private String generateScoreDescription(Long houseId) {
+        return houseInfrastructureRepository.findByHouseId(houseId)
+                .map(infra -> {
+                    String template = "이 점수는 인근 도로 트래픽, 주간 버스 운행 수, 학교 (%d곳), 지상 지하철역(%d곳), 상권 밀도를 함께 반영해 계산됐어요.";
+                    return String.format(template, infra.getSchoolCount(), infra.getSubwayCount());
+                })
+                .orElse("주변 인프라 정보를 분석하고 있습니다. 잠시 후 다시 확인해주세요.");
     }
 
     private record AnalysisPoint(Long id, String name, double lat, double lon) {
