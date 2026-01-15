@@ -17,7 +17,7 @@ public class SearchCardResponse {
 
     private UUID cardId;
     private String title;
-    private Integer basePointCount;
+    private Integer houseCount;
     private LocalDate startDate;
     private LocalDate endDate;
     private SearchCardStatus status;
@@ -26,7 +26,7 @@ public class SearchCardResponse {
         return SearchCardResponse.builder()
                 .cardId(searchCard.getId())
                 .title(searchCard.getTitle())
-                .basePointCount(searchCard.getBasePoints() != null ? searchCard.getBasePoints().size() : 0)
+                .houseCount(searchCard.getHouses() != null ? searchCard.getHouses().size() : 0)
                 .startDate(searchCard.getStartDate())
                 .endDate(searchCard.getEndDate())
                 .status(searchCard.getStatus())

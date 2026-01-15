@@ -42,6 +42,9 @@ public class SearchCard {
     @CreatedDate
     private LocalDateTime createdAt;
 
+    @OneToMany(mappedBy = "searchCard")
+    private List<House> houses = new ArrayList<>();
+
     public SearchCard(Long userId, String title, LocalDate startDate, LocalDate endDate) {
         this.userId = userId;
         this.title = title;
