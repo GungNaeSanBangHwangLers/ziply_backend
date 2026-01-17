@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import ziply.review.dto.request.SearchCardCreateRequest;
+import ziply.review.dto.response.BasePointAddressResponse;
 import ziply.review.dto.response.SearchCardResponse;
 import ziply.review.service.SearchCardService;
 
@@ -28,6 +29,20 @@ import ziply.review.service.SearchCardService;
 public class SearchCardController {
 
     private final SearchCardService searchCardService;
+
+    @Operation(
+            summary = "기점 주소 정보 조회",
+            description = "특정 카드의 모든 기점(목적지) 명칭과 주소를 조회합니다."
+    )
+    @GetMapping("/{searchCardId}/addresses")
+    public ResponseEntity<List<BasePointAddressResponse>> getBasePointAddresses(
+            @PathVariable UUID searchCardId,
+            @Parameter(hidden = true) @AuthenticationPrincipal Long userId) {
+
+        List<BasePointAddressResponse> responses = searchCardService.getBasePointAddresses(searchCardId, userId);
+
+        return ResponseEntity.ok(responses);
+    }
 
     @Operation(summary = "주거 탐색 카드 전체 조회", description = "사용자의 주거 탐색 카드를 조회하고, 불러옵니다.")
     @GetMapping

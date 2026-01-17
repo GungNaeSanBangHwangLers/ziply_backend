@@ -1,5 +1,6 @@
 package ziply.review.service;
 
+import jakarta.persistence.EntityNotFoundException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -16,6 +17,7 @@ import ziply.review.domain.House;
 import ziply.review.domain.SearchCard;
 import ziply.review.dto.request.HouseCreateRequest;
 import ziply.review.dto.request.SearchCardCreateRequest;
+import ziply.review.dto.response.BasePointAddressResponse;
 import ziply.review.dto.response.GeocodingResultResponse;
 import ziply.review.dto.response.SearchCardResponse;
 import ziply.review.event.HouseCreatedEvent;
@@ -102,6 +104,21 @@ public class SearchCardService {
 
         return savedCard.getId();
     }
+
+    @Transactional(readOnly = true)
+    public List<BasePointAddressResponse> getBasePointAddresses(UUID searchCardId, Long userId) {
+        SearchCard searchCard = searchCardRepository.findById(searchCardId)
+                .orElseThrow(() -> new EntityNotFoundException("카드를 찾을 수 없습니다."));
+
+        if (!searchCard.getUserId().equals(userId)) {
+            throw new RuntimeException("해당 카드에 대한 접근 권한이 없습니다.");
+        }
+
+        return searchCard.getBasePoints().stream()
+                .map(BasePointAddressResponse::from)
+                .toList();
+    }
+
     private void sendHouseCreatedEvents(SearchCard card, List<House> houses) {
         List<BasePointDetail> basePointDetails = card.getBasePoints().stream()
                 .map(bp -> BasePointDetail.builder()
