@@ -30,6 +30,10 @@ public class HouseAnalysis {
     private Integer walkingTimeMin;
     private Double walkingDistanceKm;
 
+    private Integer transitTimeMin;
+    private String transitPaymentStr;
+    private Integer transitDepth;
+
     private Integer dayScore;
     private Integer nightScore;
 }

@@ -20,6 +20,7 @@ import ziply.analysis.dto.response.BasePointAnalysisDto;
 import ziply.analysis.dto.response.HouseAnalysisDto;
 import ziply.analysis.dto.response.SearchCardDistanceAnalysis;
 import ziply.analysis.dto.response.SearchCardScoreAnalysis;
+import ziply.analysis.dto.response.TransitResult;
 import ziply.analysis.event.HouseCreatedEvent;
 import ziply.analysis.event.HouseUpdatedEvent;
 import ziply.analysis.repository.HouseInfrastructureRepository;
@@ -40,6 +41,7 @@ public class RouteAnalysisService {
     private final KakaoInfrastructureService kakaoInfrastructureService;
     private final NoiseScoringService noiseScoringService;
     private final WebClient.Builder webClientBuilder;
+    private final OdsayTransitProvider transitProvider;
 
     @Value("${services.review.url:http://localhost:8080}")
     private String reviewServiceUrl;
@@ -71,26 +73,43 @@ public class RouteAnalysisService {
 
         int dayScore = noiseScoringService.calculateDayNoiseScore(houseId, lat, lon);
         int nightScore = noiseScoringService.calculateNightNoiseScore(houseId, lat, lon);
+
         for (AnalysisPoint point : points) {
             try {
                 RouteResult route = kakaoRouteProvider.getWalkingRoute(lat, lon, point.lat(), point.lon());
-                saveCommon(searchCardId, houseId, point, route, dayScore, nightScore);
+                TransitResult transit = transitProvider.getTransitRoute(lat, lon, point.lat(), point.lon());
+
+                saveCommon(searchCardId, houseId, point, route, transit, dayScore, nightScore);
             } catch (Exception e) {
                 log.error("Analysis failed: HouseId={}, PointId={}", houseId, point.id(), e);
             }
         }
     }
 
-    private void saveCommon(UUID searchCardId, Long houseId, AnalysisPoint point, RouteResult result, Integer dayScore,
+    private void saveCommon(UUID searchCardId, Long houseId, AnalysisPoint point, RouteResult result,
+                            TransitResult transit, Integer dayScore,
                             Integer nightScore) {
         double distanceKm = result.distanceMeters() / 1000.0;
-        int timeMin = (distanceKm > 0) ? (int) Math.round((distanceKm / AVG_WALKING_SPEED_KM_H) * MINUTES_IN_HOUR) : 0;
+        int walkTimeMin = (distanceKm > 0) ? (int) Math.round((distanceKm / AVG_WALKING_SPEED_KM_H) * MINUTES_IN_HOUR) : 0;
 
-        HouseAnalysis analysis = HouseAnalysis.builder().searchCardId(searchCardId).houseId(houseId)
-                .basePointId(point.id()).basePointName(point.name()).walkingTimeMin(timeMin)
-                .walkingDistanceKm(distanceKm).dayScore(dayScore).nightScore(nightScore).build();
+        HouseAnalysis analysis = HouseAnalysis.builder()
+                .searchCardId(searchCardId)
+                .houseId(houseId)
+                .basePointId(point.id())
+                .basePointName(point.name())
+                .walkingTimeMin(walkTimeMin)
+                .walkingDistanceKm(distanceKm)
+                .transitTimeMin(transit.timeMin())
+                .transitPaymentStr(transit.paymentStr())
+                .transitDepth(transit.transitCount())
+                .dayScore(dayScore)
+                .nightScore(nightScore)
+                .build();
 
         routeAnalysisRepository.save(analysis);
+
+        log.info("[Analysis Saved] HouseId: {}, Point: {}, Walk: {}min, Transit: {}min ({} transfers)",
+                houseId, point.name(), walkTimeMin, transit.timeMin(), transit.transitCount());
     }
 
     @Transactional(readOnly = true)
