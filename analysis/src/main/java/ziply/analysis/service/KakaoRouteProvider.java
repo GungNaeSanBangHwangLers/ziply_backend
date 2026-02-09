@@ -1,6 +1,7 @@
 package ziply.analysis.service;
 
 
+import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -44,5 +45,38 @@ public class KakaoRouteProvider {
             return new RouteResult(0, 0);
         }
         return new RouteResult(0, response.getDistanceMeters());
+    }
+
+    public RouteResult getCarRoute(double startLat, double startLon, double endLat, double endLon) {
+        String origin = String.format("%f,%f", startLon, startLat);
+        String destination = String.format("%f,%f", endLon, endLat);
+
+        try {
+            JsonNode response = webClient.get()
+                    .uri(uriBuilder -> uriBuilder.path(DIRECTION_ENDPOINT)
+                            .queryParam("origin", origin)
+                            .queryParam("destination", destination)
+                            .queryParam("priority", "RECOMMEND") // 추천 경로
+                            .build())
+                    .header("Authorization", "KakaoAK " + kakaoRestApiKey)
+                    .retrieve()
+                    .bodyToMono(JsonNode.class)
+                    .block();
+
+            if (response == null || response.at("/routes/0").isMissingNode()) {
+                log.warn("카카오 자동차 API: 경로를 찾을 수 없음. Origin={}, Dest={}", origin, destination);
+                return new RouteResult(0, 0);
+            }
+
+            JsonNode summary = response.at("/routes/0/summary");
+            int duration = summary.path("duration").asInt();
+            int distance = summary.path("distance").asInt();
+
+            return new RouteResult(duration, distance);
+
+        } catch (Exception e) {
+            log.error("카카오 자동차 경로 API 호출 실패: {}", e.getMessage());
+            return new RouteResult(0, 0);
+        }
     }
 }

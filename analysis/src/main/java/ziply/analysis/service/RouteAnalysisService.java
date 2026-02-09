@@ -76,21 +76,24 @@ public class RouteAnalysisService {
 
         for (AnalysisPoint point : points) {
             try {
-                RouteResult route = kakaoRouteProvider.getWalkingRoute(lat, lon, point.lat(), point.lon());
+                RouteResult walk = kakaoRouteProvider.getWalkingRoute(lat, lon, point.lat(), point.lon());
                 TransitResult transit = transitProvider.getTransitRoute(lat, lon, point.lat(), point.lon());
-
-                saveCommon(searchCardId, houseId, point, route, transit, dayScore, nightScore);
+                RouteResult car = kakaoRouteProvider.getCarRoute(lat, lon, point.lat(), point.lon());
+                saveCommon(searchCardId, houseId, point, walk, transit, car, dayScore, nightScore);
             } catch (Exception e) {
                 log.error("Analysis failed: HouseId={}, PointId={}", houseId, point.id(), e);
             }
         }
     }
 
-    private void saveCommon(UUID searchCardId, Long houseId, AnalysisPoint point, RouteResult result,
-                            TransitResult transit, Integer dayScore,
-                            Integer nightScore) {
-        double distanceKm = result.distanceMeters() / 1000.0;
-        int walkTimeMin = (distanceKm > 0) ? (int) Math.round((distanceKm / AVG_WALKING_SPEED_KM_H) * MINUTES_IN_HOUR) : 0;
+    private void saveCommon(UUID searchCardId, Long houseId, AnalysisPoint point,
+                            RouteResult walk, TransitResult transit, RouteResult car,
+                            Integer dayScore, Integer nightScore) {
+
+        int carTimeMin = (car.durationSeconds() > 0) ? (int) Math.round(car.durationSeconds() / 60.0) : 0;
+
+        double distanceKm = walk.distanceMeters() / 1000.0;
+        int walkTimeMin = (distanceKm > 0) ? (int) Math.round((distanceKm / 4.5) * 60) : 0;
 
         HouseAnalysis analysis = HouseAnalysis.builder()
                 .searchCardId(searchCardId)
@@ -102,14 +105,12 @@ public class RouteAnalysisService {
                 .transitTimeMin(transit.timeMin())
                 .transitPaymentStr(transit.paymentStr())
                 .transitDepth(transit.transitCount())
+                .carTimeMin(carTimeMin)
                 .dayScore(dayScore)
                 .nightScore(nightScore)
                 .build();
 
         routeAnalysisRepository.save(analysis);
-
-        log.info("[Analysis Saved] HouseId: {}, Point: {}, Walk: {}min, Transit: {}min ({} transfers)",
-                houseId, point.name(), walkTimeMin, transit.timeMin(), transit.transitCount());
     }
 
     @Transactional(readOnly = true)

@@ -34,6 +34,8 @@ public class HouseAnalysis {
     private String transitPaymentStr;
     private Integer transitDepth;
 
+    private Integer carTimeMin;
+
     private Integer dayScore;
     private Integer nightScore;
 }
