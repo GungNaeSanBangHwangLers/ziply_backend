@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import ziply.analysis.dto.response.SearchCardDistanceAnalysis;
+import ziply.analysis.dto.response.BasePointAnalysisDto;
 import ziply.analysis.dto.response.SearchCardScoreAnalysis;
 import ziply.analysis.service.RouteAnalysisService;
 
@@ -21,11 +21,10 @@ public class RouteAnalysisController {
     private final RouteAnalysisService routeAnalysisService;
 
     @GetMapping("/distance/{searchCardId}")
-    public ResponseEntity<SearchCardDistanceAnalysis> getSearchCardDistanceAnalysis(@PathVariable UUID searchCardId,
+    public ResponseEntity<List<BasePointAnalysisDto>> getSearchCardDistanceAnalysis(@PathVariable UUID searchCardId,
                                                                                     @AuthenticationPrincipal Long userId) {
         return ResponseEntity.ok(routeAnalysisService.getSearchCardDistanceAnalysis(searchCardId, userId));
     }
-
     @GetMapping("/score/{searchCardId}")
     public ResponseEntity<List<SearchCardScoreAnalysis>> getSearchCardScoreAnalysis(
             @PathVariable UUID searchCardId,

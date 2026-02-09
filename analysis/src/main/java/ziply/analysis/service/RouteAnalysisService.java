@@ -19,7 +19,6 @@ import reactor.core.publisher.Mono;
 import ziply.analysis.domain.HouseAnalysis;
 import ziply.analysis.dto.response.BasePointAnalysisDto;
 import ziply.analysis.dto.response.HouseAnalysisDto;
-import ziply.analysis.dto.response.SearchCardDistanceAnalysis;
 import ziply.analysis.dto.response.SearchCardScoreAnalysis;
 import ziply.analysis.dto.response.TransitResult;
 import ziply.analysis.event.HouseCreatedEvent;
@@ -111,12 +110,12 @@ public class RouteAnalysisService {
     }
 
     @Transactional(readOnly = true)
-    public SearchCardDistanceAnalysis getSearchCardDistanceAnalysis(UUID searchCardId, Long userId) {
+    public List<BasePointAnalysisDto> getSearchCardDistanceAnalysis(UUID searchCardId, Long userId) {
         checkCardOwner(searchCardId, userId);
 
         List<HouseAnalysis> allData = routeAnalysisRepository.findBySearchCardId(searchCardId);
         if (allData.isEmpty()) {
-            return new SearchCardDistanceAnalysis(Collections.emptyList());
+            return Collections.emptyList();
         }
 
         List<Long> distinctHouseIds = allData.stream()
@@ -133,7 +132,7 @@ public class RouteAnalysisService {
         Map<Long, List<HouseAnalysis>> grouped = allData.stream()
                 .collect(Collectors.groupingBy(HouseAnalysis::getBasePointId));
 
-        List<BasePointAnalysisDto> basePointDtos = grouped.entrySet().stream().map(entry -> {
+        return grouped.entrySet().stream().map(entry -> {
             List<HouseAnalysis> results = entry.getValue();
             results.sort(Comparator.comparing(HouseAnalysis::getWalkingTimeMin));
 
@@ -146,7 +145,7 @@ public class RouteAnalysisService {
             }
 
             String transportMessage = String.format(
-                    "한 달(30일) 기준 왕복 교통비는 %s이에요.\n" +
+                    "한 달(30일) 기준 왕복 교통비는 %s이에요." +
                             "서울지역 대중교통은 기후동행카드를 통해 62,000원(만19~39세 55,000원)으로 30일 무제한 이용가능하니 고려해보세요.",
                     String.join(", ", feeDetails)
             );
@@ -157,8 +156,6 @@ public class RouteAnalysisService {
 
             return new BasePointAnalysisDto(houseDtos, transportMessage);
         }).toList();
-
-        return new SearchCardDistanceAnalysis(basePointDtos);
     }
 
     @Transactional(readOnly = true)
@@ -166,11 +163,26 @@ public class RouteAnalysisService {
         checkCardOwner(searchCardId, userId);
 
         List<HouseAnalysis> allData = routeAnalysisRepository.findBySearchCardId(searchCardId);
+        if (allData.isEmpty()) {
+            return Collections.emptyList();
+        }
 
-        return allData.stream().collect(Collectors.groupingBy(HouseAnalysis::getHouseId)).entrySet().stream()
+        List<Long> distinctHouseIds = allData.stream()
+                .map(HouseAnalysis::getHouseId)
+                .distinct()
+                .sorted()
+                .toList();
+
+        Map<Long, String> houseLabelMap = new java.util.HashMap<>();
+        for (int i = 0; i < distinctHouseIds.size(); i++) {
+            houseLabelMap.put(distinctHouseIds.get(i), String.valueOf((char) ('A' + i)));
+        }
+
+        return allData.stream()
+                .collect(Collectors.groupingBy(HouseAnalysis::getHouseId))
+                .entrySet().stream()
                 .map(entry -> {
                     Long houseId = entry.getKey();
-
                     String dayMessage = generateScoreDescription(houseId);
 
                     List<HouseAnalysis> houseDataList = entry.getValue();
@@ -178,15 +190,16 @@ public class RouteAnalysisService {
 
                     SearchCardScoreAnalysis dto = new SearchCardScoreAnalysis();
                     dto.setHouseId(houseId);
+                    dto.setLabel(houseLabelMap.get(houseId));
+
                     dto.setDayScore(first.getDayScore());
                     dto.setNightScore(first.getNightScore());
-
-                    double avg = (first.getDayScore() + (double) first.getNightScore()) / 2.0;
-                    dto.setAvgScore(avg);
                     dto.setMessage(dayMessage);
 
                     return dto;
-                }).sorted(Comparator.comparing(SearchCardScoreAnalysis::getHouseId)).collect(Collectors.toList());
+                })
+                .sorted(Comparator.comparing(SearchCardScoreAnalysis::getHouseId))
+                .collect(Collectors.toList());
     }
 
     private void checkCardOwner(UUID searchCardId, Long userId) {
