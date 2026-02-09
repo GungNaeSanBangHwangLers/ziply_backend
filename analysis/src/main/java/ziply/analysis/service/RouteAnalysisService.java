@@ -5,6 +5,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -74,40 +75,36 @@ public class RouteAnalysisService {
         int dayScore = noiseScoringService.calculateDayNoiseScore(houseId, lat, lon);
         int nightScore = noiseScoringService.calculateNightNoiseScore(houseId, lat, lon);
 
-        for (AnalysisPoint point : points) {
+        List<CompletableFuture<Void>> futures = points.stream().map(point -> CompletableFuture.runAsync(() -> {
             try {
                 RouteResult walk = kakaoRouteProvider.getWalkingRoute(lat, lon, point.lat(), point.lon());
                 TransitResult transit = transitProvider.getTransitRoute(lat, lon, point.lat(), point.lon());
                 RouteResult car = kakaoRouteProvider.getCarRoute(lat, lon, point.lat(), point.lon());
+
                 saveCommon(searchCardId, houseId, point, walk, transit, car, dayScore, nightScore);
             } catch (Exception e) {
-                log.error("Analysis failed: HouseId={}, PointId={}", houseId, point.id(), e);
+                log.error("Analysis failed in Async: HouseId={}, PointId={}", houseId, point.id(), e);
             }
-        }
+        })).toList();
+
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
     }
 
-    private void saveCommon(UUID searchCardId, Long houseId, AnalysisPoint point,
-                            RouteResult walk, TransitResult transit, RouteResult car,
-                            Integer dayScore, Integer nightScore) {
+    private void saveCommon(UUID searchCardId, Long houseId, AnalysisPoint point, RouteResult walk,
+                            TransitResult transit, RouteResult car, Integer dayScore, Integer nightScore) {
 
-        int carTimeMin = (car.durationSeconds() > 0) ? (int) Math.round(car.durationSeconds() / 60.0) : 0;
+        int carTimeMin =
+                (car.durationSeconds() > 0) ? (int) Math.round(car.durationSeconds() / (double) MINUTES_IN_HOUR) : 0;
 
         double distanceKm = walk.distanceMeters() / 1000.0;
-        int walkTimeMin = (distanceKm > 0) ? (int) Math.round((distanceKm / 4.5) * 60) : 0;
 
-        HouseAnalysis analysis = HouseAnalysis.builder()
-                .searchCardId(searchCardId)
-                .houseId(houseId)
-                .basePointId(point.id())
-                .basePointName(point.name())
-                .walkingTimeMin(walkTimeMin)
-                .walkingDistanceKm(distanceKm)
-                .transitTimeMin(transit.timeMin())
-                .transitPaymentStr(transit.paymentStr())
-                .transitDepth(transit.transitCount())
-                .carTimeMin(carTimeMin)
-                .dayScore(dayScore)
-                .nightScore(nightScore)
+        int walkTimeMin =
+                (distanceKm > 0) ? (int) Math.round((distanceKm / AVG_WALKING_SPEED_KM_H) * MINUTES_IN_HOUR) : 0;
+
+        HouseAnalysis analysis = HouseAnalysis.builder().searchCardId(searchCardId).houseId(houseId)
+                .basePointId(point.id()).basePointName(point.name()).walkingTimeMin(walkTimeMin)
+                .walkingDistanceKm(distanceKm).transitTimeMin(transit.timeMin()).transitPaymentStr(transit.paymentStr())
+                .transitDepth(transit.transitCount()).carTimeMin(carTimeMin).dayScore(dayScore).nightScore(nightScore)
                 .build();
 
         routeAnalysisRepository.save(analysis);
@@ -118,9 +115,19 @@ public class RouteAnalysisService {
         checkCardOwner(searchCardId, userId);
 
         List<HouseAnalysis> allData = routeAnalysisRepository.findBySearchCardId(searchCardId);
-
         if (allData.isEmpty()) {
             return new SearchCardDistanceAnalysis(Collections.emptyList());
+        }
+
+        List<Long> distinctHouseIds = allData.stream()
+                .map(HouseAnalysis::getHouseId)
+                .distinct()
+                .sorted()
+                .toList();
+
+        Map<Long, String> houseLabelMap = new java.util.HashMap<>();
+        for (int i = 0; i < distinctHouseIds.size(); i++) {
+            houseLabelMap.put(distinctHouseIds.get(i), String.valueOf((char) ('A' + i)));
         }
 
         Map<Long, List<HouseAnalysis>> grouped = allData.stream()
@@ -129,8 +136,26 @@ public class RouteAnalysisService {
         List<BasePointAnalysisDto> basePointDtos = grouped.entrySet().stream().map(entry -> {
             List<HouseAnalysis> results = entry.getValue();
             results.sort(Comparator.comparing(HouseAnalysis::getWalkingTimeMin));
-            return new BasePointAnalysisDto(entry.getKey(), results.get(0).getBasePointName(),
-                    results.stream().map(HouseAnalysisDto::from).toList());
+
+            List<String> feeDetails = new java.util.ArrayList<>();
+            for (HouseAnalysis entity : results) {
+                String label = houseLabelMap.get(entity.getHouseId());
+                int rawPrice = Integer.parseInt(entity.getTransitPaymentStr().replaceAll("[^0-9]", ""));
+                int monthlyPrice = rawPrice * 2 * 30;
+                feeDetails.add(String.format("%s는 %,d원", label, monthlyPrice));
+            }
+
+            String transportMessage = String.format(
+                    "한 달(30일) 기준 왕복 교통비는 %s이에요.\n" +
+                            "서울지역 대중교통은 기후동행카드를 통해 62,000원(만19~39세 55,000원)으로 30일 무제한 이용가능하니 고려해보세요.",
+                    String.join(", ", feeDetails)
+            );
+
+            List<HouseAnalysisDto> houseDtos = results.stream()
+                    .map(entity -> HouseAnalysisDto.from(entity, houseLabelMap.get(entity.getHouseId())))
+                    .toList();
+
+            return new BasePointAnalysisDto(houseDtos, transportMessage);
         }).toList();
 
         return new SearchCardDistanceAnalysis(basePointDtos);
@@ -142,9 +167,7 @@ public class RouteAnalysisService {
 
         List<HouseAnalysis> allData = routeAnalysisRepository.findBySearchCardId(searchCardId);
 
-        return allData.stream()
-                .collect(Collectors.groupingBy(HouseAnalysis::getHouseId))
-                .entrySet().stream()
+        return allData.stream().collect(Collectors.groupingBy(HouseAnalysis::getHouseId)).entrySet().stream()
                 .map(entry -> {
                     Long houseId = entry.getKey();
 
@@ -158,28 +181,22 @@ public class RouteAnalysisService {
                     dto.setDayScore(first.getDayScore());
                     dto.setNightScore(first.getNightScore());
 
-                    double avg = (first.getDayScore() + (double)first.getNightScore()) / 2.0;
+                    double avg = (first.getDayScore() + (double) first.getNightScore()) / 2.0;
                     dto.setAvgScore(avg);
                     dto.setMessage(dayMessage);
 
                     return dto;
-                })
-                .sorted(Comparator.comparing(SearchCardScoreAnalysis::getHouseId))
-                .collect(Collectors.toList());
+                }).sorted(Comparator.comparing(SearchCardScoreAnalysis::getHouseId)).collect(Collectors.toList());
     }
 
     private void checkCardOwner(UUID searchCardId, Long userId) {
         log.info("[CHECK] Calling review-service to check owner. URL: {}", reviewServiceUrl);
 
-        Boolean isOwner = webClientBuilder.build()
-                .get()
-                .uri(reviewServiceUrl + "/api/v1/review/card/{searchCardId}/owner-check?userId={userId}",
-                        searchCardId, userId)
-                .retrieve()
-                .onStatus(HttpStatusCode::isError, clientResponse ->
-                        Mono.error(new AccessDeniedException("리뷰 서비스 권한 확인 중 오류가 발생했습니다.")))
-                .bodyToMono(Boolean.class)
-                .block();
+        Boolean isOwner = webClientBuilder.build().get()
+                .uri(reviewServiceUrl + "/api/v1/review/card/{searchCardId}/owner-check?userId={userId}", searchCardId,
+                        userId).retrieve().onStatus(HttpStatusCode::isError,
+                        clientResponse -> Mono.error(new AccessDeniedException("리뷰 서비스 권한 확인 중 오류가 발생했습니다.")))
+                .bodyToMono(Boolean.class).block();
 
         if (isOwner == null || !isOwner) {
             log.warn("[Security Audit] Unauthorized card access: user={}, card={}", userId, searchCardId);
@@ -188,12 +205,10 @@ public class RouteAnalysisService {
     }
 
     private String generateScoreDescription(Long houseId) {
-        return houseInfrastructureRepository.findByHouseId(houseId)
-                .map(infra -> {
-                    String template = "이 점수는 인근 도로 트래픽, 주간 버스 운행 수, 학교 (%d곳), 지상 지하철역(%d곳), 상권 밀도를 함께 반영해 계산됐어요.";
-                    return String.format(template, infra.getSchoolCount(), infra.getSubwayCount());
-                })
-                .orElse("주변 인프라 정보를 분석하고 있습니다. 잠시 후 다시 확인해주세요.");
+        return houseInfrastructureRepository.findByHouseId(houseId).map(infra -> {
+            String template = "이 점수는 인근 도로 트래픽, 주간 버스 운행 수, 학교 (%d곳), 지상 지하철역(%d곳), 상권 밀도를 함께 반영해 계산됐어요.";
+            return String.format(template, infra.getSchoolCount(), infra.getSubwayCount());
+        }).orElse("주변 인프라 정보를 분석하고 있습니다. 잠시 후 다시 확인해주세요.");
     }
 
     private record AnalysisPoint(Long id, String name, double lat, double lon) {
