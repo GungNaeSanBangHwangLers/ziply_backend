@@ -1,6 +1,5 @@
 package ziply.analysis.service;
 
-
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -8,6 +7,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import ziply.analysis.dto.response.KakaoRouteResponse;
+
+import java.time.DayOfWeek;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.TemporalAdjusters;
 
 @Component
 @RequiredArgsConstructor
@@ -51,12 +55,15 @@ public class KakaoRouteProvider {
         String origin = String.format("%f,%f", startLon, startLat);
         String destination = String.format("%f,%f", endLon, endLat);
 
+        String departureTime = getNextWeekdayEightAM();
+
         try {
             JsonNode response = webClient.get()
                     .uri(uriBuilder -> uriBuilder.path(DIRECTION_ENDPOINT)
                             .queryParam("origin", origin)
                             .queryParam("destination", destination)
-                            .queryParam("priority", "RECOMMEND") // 추천 경로
+                            .queryParam("origin_time", departureTime) // 출근 시간 적용
+                            .queryParam("priority", "RECOMMEND")
                             .build())
                     .header("Authorization", "KakaoAK " + kakaoRestApiKey)
                     .retrieve()
@@ -75,8 +82,24 @@ public class KakaoRouteProvider {
             return new RouteResult(duration, distance);
 
         } catch (Exception e) {
-            log.error("카카오 자동차 경로 API 호출 실패: {}", e.getMessage());
+            log.error("카카오 자동차 경로 API 호출 실패 (출근시간 모드): {}", e.getMessage());
             return new RouteResult(0, 0);
         }
+    }
+
+    private String getNextWeekdayEightAM() {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime target = now.withHour(8).withMinute(0).withSecond(0).withNano(0);
+
+        if (target.isBefore(now) || isWeekend(target)) {
+            target = target.with(TemporalAdjusters.next(DayOfWeek.MONDAY));
+        }
+
+        return target.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"));
+    }
+
+    private boolean isWeekend(LocalDateTime date) {
+        DayOfWeek day = date.getDayOfWeek();
+        return day == DayOfWeek.SATURDAY || day == DayOfWeek.SUNDAY;
     }
 }
