@@ -35,7 +35,6 @@ public class House {
     private Double latitude;
     private Double longitude;
 
-    // === [추가] Measurement와의 1:N 연관관계 설정 ===
     @OneToMany(mappedBy = "house", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Measurement> measurements = new ArrayList<>();
 

@@ -13,4 +13,6 @@ public interface HouseRepository extends JpaRepository<House, Long> {
     Optional<House> findByIdAndSearchCardUserId(Long id, Long userId);
 
     long countBySearchCard(SearchCard card);
+
+    List<House> findBySearchCardIdOrderByIdAsc(UUID searchCardId);
 }

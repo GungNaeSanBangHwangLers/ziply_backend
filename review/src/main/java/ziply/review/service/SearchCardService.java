@@ -15,13 +15,14 @@ import org.springframework.transaction.annotation.Transactional;
 import ziply.review.domain.BasePoint;
 import ziply.review.domain.House;
 import ziply.review.domain.SearchCard;
-import ziply.review.dto.request.HouseCreateRequest;
 import ziply.review.dto.request.SearchCardCreateRequest;
 import ziply.review.dto.response.BasePointAddressResponse;
 import ziply.review.dto.response.GeocodingResultResponse;
+import ziply.review.dto.response.MapInfoResponse;
 import ziply.review.dto.response.SearchCardResponse;
 import ziply.review.event.HouseCreatedEvent;
 import ziply.review.event.HouseCreatedEvent.BasePointDetail;
+import ziply.review.repository.BasePointRepository;
 import ziply.review.repository.HouseRepository;
 import ziply.review.repository.SearchCardRepository;
 
@@ -35,13 +36,12 @@ public class SearchCardService {
     private final GeocodingService geocodingService;
     private  final HouseRepository houseRepository;
     private final ReviewProducerService  reviewProducerService;
+    private final BasePointRepository basePointRepository;
 
     @Transactional
     public UUID createSearchCard(Long userId, SearchCardCreateRequest request) {
-        // 타입 에러 방지를 위해 변수 타입을 명확히 하거나 var 사용
         var houseRequests = request.getHouses() != null ? request.getHouses() : new ArrayList<SearchCardCreateRequest.HouseCreateRequest>();
 
-        // 1. 집 엔티티 리스트 준비 (지오코딩 포함)
         List<House> pendingHouses = houseRequests.stream()
                 .map(hReq -> {
                     try {
@@ -60,7 +60,6 @@ public class SearchCardService {
                 .filter(Objects::nonNull)
                 .toList();
 
-        // 2. 날짜 계산
         LocalDate calculatedStart = LocalDate.now();
         LocalDate calculatedEnd = null;
 
@@ -76,10 +75,8 @@ public class SearchCardService {
             }
         }
 
-        // 3. 카드 생성 및 저장
         SearchCard searchCard = new SearchCard(userId, "새로운 탐색 카드", calculatedStart, calculatedEnd);
 
-        // 기점 주소 처리
         if (request.getBasePointAddress() != null && !request.getBasePointAddress().isBlank()) {
             try {
                 GeocodingResultResponse geoResult = geocodingService.geocodeAddress(request.getBasePointAddress());
@@ -91,13 +88,11 @@ public class SearchCardService {
 
         SearchCard savedCard = searchCardRepository.save(searchCard);
 
-        // 4. 연관관계 매핑 및 집 저장
         for (House house : pendingHouses) {
             house.setSearchCard(savedCard);
         }
         List<House> savedHouses = houseRepository.saveAll(pendingHouses);
 
-        // 5. 이벤트 발행
         if (!savedHouses.isEmpty()) {
             sendHouseCreatedEvents(savedCard, savedHouses);
         }
@@ -153,5 +148,42 @@ public class SearchCardService {
 
     public boolean isCardOwner(UUID searchCardId, Long userId) {
         return searchCardRepository.existsByIdAndUserId(searchCardId, userId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<MapInfoResponse> getMapInfo(UUID searchCardId, Long userId) {
+        BasePoint basePoint = basePointRepository.findBySearchCardId(searchCardId)
+                .orElseThrow(() -> new IllegalArgumentException("기점 정보를 찾을 수 없습니다."));
+
+        if (!basePoint.getSearchCard().getUserId().equals(userId)) {
+            throw new RuntimeException("해당 정보에 대한 접근 권한이 없습니다.");
+        }
+
+        List<House> houses = houseRepository.findBySearchCardIdOrderByIdAsc(searchCardId);
+
+        List<MapInfoResponse> result = new ArrayList<>();
+
+        result.add(MapInfoResponse.builder()
+                .id(null)
+                .label("기준지")
+                .latitude(basePoint.getLatitude())
+                .longitude(basePoint.getLongitude())
+                .address(basePoint.getAddress())
+                .build());
+
+        for (int i = 0; i < houses.size(); i++) {
+            House house = houses.get(i);
+            String label = String.valueOf((char) ('A' + i));
+
+            result.add(MapInfoResponse.builder()
+                    .id(house.getId())
+                    .label(label)
+                    .latitude(house.getLatitude())
+                    .longitude(house.getLongitude())
+                    .address(house.getAddress())
+                    .build());
+        }
+
+        return result;
     }
 }

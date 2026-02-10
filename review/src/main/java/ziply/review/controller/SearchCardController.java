@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import ziply.review.dto.request.SearchCardCreateRequest;
 import ziply.review.dto.response.BasePointAddressResponse;
+import ziply.review.dto.response.MapInfoResponse;
 import ziply.review.dto.response.SearchCardResponse;
 import ziply.review.service.SearchCardService;
 
@@ -29,6 +30,18 @@ import ziply.review.service.SearchCardService;
 public class SearchCardController {
 
     private final SearchCardService searchCardService;
+
+    @Operation(
+            summary = "지도 정보 조회",
+            description = "특정 카드의 지도 관련 명칭, 위도, 경도를 조회합니다."
+    )
+    @GetMapping("/map/{searchCardId}")
+    public ResponseEntity<List<MapInfoResponse>> getMapInfo(
+            @PathVariable UUID searchCardId,
+            @Parameter(hidden = true) @AuthenticationPrincipal Long userId) {
+        List<MapInfoResponse> responses = searchCardService.getMapInfo(searchCardId, userId);
+        return ResponseEntity.ok(responses);
+    }
 
     @Operation(
             summary = "기점 주소 정보 조회",
