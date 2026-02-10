@@ -3,6 +3,7 @@ package ziply.review.service;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -93,13 +94,26 @@ public class HouseService {
         });
         return savedHouses.stream().map(House::getId).toList();
     }
+
     public List<HouseListResponse> getHousesBySearchCard(UUID searchCardId, Long userId) {
         searchCardRepository.findByIdAndUserId(searchCardId, userId)
                 .orElseThrow(() -> new IllegalArgumentException("접근 권한이 없거나 존재하지 않는 카드입니다."));
 
-        return houseRepository.findBySearchCardId(searchCardId).stream()
-                .map(house -> HouseListResponse.builder().houseId(house.getId()).address(house.getAddress())
-                        .visitTime(house.getVisitDateTime()).build()).collect(Collectors.toList());
+        List<House> houses = houseRepository.findBySearchCardId(searchCardId);
+
+        return IntStream.range(0, houses.size())
+                .mapToObj(i -> {
+                    House house = houses.get(i);
+                    String label = String.valueOf((char) ('A' + i));
+
+                    return HouseListResponse.builder()
+                            .houseId(house.getId())
+                            .address(house.getAddress())
+                            .visitTime(house.getVisitDateTime())
+                            .label(label)
+                            .build();
+                })
+                .collect(Collectors.toList());
     }
 
     @Transactional

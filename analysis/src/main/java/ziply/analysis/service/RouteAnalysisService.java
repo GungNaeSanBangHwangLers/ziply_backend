@@ -43,7 +43,7 @@ public class RouteAnalysisService {
     private final WebClient.Builder webClientBuilder;
     private final OdsayTransitProvider transitProvider;
 
-    @Value("${services.review.url:http://localhost:8080}")
+    @Value("${services.review.url:http://review-service:8080}")
     private String reviewServiceUrl;
 
     @Transactional

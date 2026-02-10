@@ -10,6 +10,7 @@ import lombok.Getter;
 @AllArgsConstructor
 public class HouseListResponse {
     private Long houseId;
+    private String label;
     private String address;
     private LocalDateTime visitTime;
 }

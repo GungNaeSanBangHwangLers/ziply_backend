@@ -8,6 +8,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -239,8 +240,7 @@ public class MeasurementService {
             Measurement sample = mList.get(0);
 
             return new DirectionGroupResponse(type, sample.getDirectionFeatures(), sample.getDirectionPros(),
-                    sample.getDirectionCons(), List.of(houseId)
-            );
+                    sample.getDirectionCons(), List.of(houseId));
         }).toList();
     }
 
@@ -252,24 +252,21 @@ public class MeasurementService {
             return List.of();
         }
 
-        return allMeasurements.stream()
-                .collect(Collectors.groupingBy(m -> m.getHouse().getId())) // House ID로 그룹핑
-                .entrySet().stream()
-                .map(entry -> {
-                    Long houseId = entry.getKey();
-                    List<Measurement> houseMeasurements = entry.getValue();
+        Map<Long, List<Measurement>> groupedByHouse = allMeasurements.stream()
+                .collect(Collectors.groupingBy(m -> m.getHouse().getId()));
+        List<Long> houseIds = groupedByHouse.keySet().stream().sorted().toList();
 
-                    double averageLux = houseMeasurements.stream()
-                            .map(Measurement::getLightLevel)
-                            .filter(lux -> lux != null && lux > 0.0)
-                            .mapToDouble(Double::doubleValue)
-                            .average()
-                            .orElse(0.0);
+        return IntStream.range(0, houseIds.size()).mapToObj(i -> {
+            Long houseId = houseIds.get(i);
+            List<Measurement> houseMeasurements = groupedByHouse.get(houseId);
 
-                    int score = (int) Math.min(Math.round((averageLux / 2500.0) * 100), 100);
+            double averageLux = houseMeasurements.stream().map(Measurement::getLightLevel)
+                    .filter(lux -> lux != null && lux > 0.0).mapToDouble(Double::doubleValue).average().orElse(0.0);
 
-                    return new HouseSunlightResponse(houseId, score);
-                })
-                .toList();
+            int score = (int) Math.min(Math.round((averageLux / 2500.0) * 100), 100);
+            String label = String.valueOf((char) ('A' + i));
+
+            return new HouseSunlightResponse(houseId, label, score);
+        }).toList();
     }
 }
