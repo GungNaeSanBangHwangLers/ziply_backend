@@ -5,13 +5,16 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import ziply.review.dto.request.MeasurementRequest;
 import ziply.review.dto.response.DirectionGroupResponse;
 import ziply.review.dto.response.HouseSunlightResponse;
 import ziply.review.dto.response.MeasurementCardResponse;
+import ziply.review.service.ImageUploadService;
 import ziply.review.service.MeasurementService;
 
 
@@ -22,6 +25,7 @@ import ziply.review.service.MeasurementService;
 public class MeasurementController {
 
     private final MeasurementService measurementService;
+    private final ImageUploadService imageUploadService;
 
     @Operation(summary = "탐색 카드별 평균 채광 점수 조회", description = "특정 탐색 카드에 속한 모든 하우스의 채광 측정값 평균 점수를 반환합니다.")
     @GetMapping("/score/{cardId}")
@@ -33,14 +37,21 @@ public class MeasurementController {
         return ResponseEntity.ok(response);
     }
 
-    @Operation(summary = "하우스 측정 데이터 저장 (측정하기)", description = "방향(0~360도)과 채광 수치를 저장하고, 하우스 상태를 '탐색후'로 변경합니다.")
-    @PostMapping("/{houseId}/measure")
-    public ResponseEntity<Void> addMeasurement(@AuthenticationPrincipal Long userId, @PathVariable Long houseId,
-                                               @RequestBody List<MeasurementRequest> request) {
+    @PostMapping(value = "/{houseId}/measure", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Void> addMeasurements(
+            @PathVariable Long houseId,
+            @RequestPart("requests") List<MeasurementRequest> requests,
+            @RequestPart("images") List<MultipartFile> images,
+            @AuthenticationPrincipal Long userId
+    ){
 
-        measurementService.addBulkMeasurements(userId, houseId, request);
+        List<String> imageUrls = images.stream()
+                .map(imageUploadService::upload)
+                .toList();
 
-        return ResponseEntity.ok().build();
+        measurementService.addBulkMeasurements(userId, houseId, requests, imageUrls);
+
+        return ResponseEntity.status(201).build();
     }
 
     @Operation(summary = "하우스 측정 카드 데이터 조회", description = "이미지처럼 1~3차 방향/채광 측정 상태를 반환합니다.")
@@ -52,11 +63,14 @@ public class MeasurementController {
     }
 
     @Operation(summary = "하우스 측정 데이터 전체 다시 측정 (업데이트)", description = "1~3차 측정 데이터를 리스트로 받아 전체 수정합니다.")
-    @PatchMapping("/{houseId}/measure")
-    public ResponseEntity<Void> reMeasureAll(@AuthenticationPrincipal Long userId, @PathVariable Long houseId,
-                                             @RequestBody List<MeasurementRequest> requests) {
+    @PatchMapping(value = "/{houseId}/measure", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Void> reMeasureAll(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long houseId,
+            @RequestPart("requests") List<MeasurementRequest> requests,
+            @RequestPart("images") List<MultipartFile> images) {
 
-        measurementService.reMeasure(userId, houseId, requests);
+        measurementService.reMeasure(userId, houseId, requests, images);
         return ResponseEntity.ok().build();
     }
 

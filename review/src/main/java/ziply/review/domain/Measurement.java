@@ -22,8 +22,11 @@ public class Measurement {
     private Integer round;
     private Double direction;
     private Double lightLevel;
-
     private String directionType;
+    private String windowLocation;
+
+    @Column(length = 1000)
+    private String imageUrl;
 
     @Column(length = 1000)
     private String directionFeatures;
@@ -35,20 +38,48 @@ public class Measurement {
     private String directionCons;
 
     @Builder
-    public Measurement(House house, Integer round, Double direction, Double lightLevel, String directionType,
+    public Measurement(House house, Integer round, Double direction, Double lightLevel,
+                       String directionType, String windowLocation, String imageUrl,
                        String directionFeatures, String directionPros, String directionCons) {
         this.house = house;
         this.round = round;
-        this.direction = direction;
+        this.direction = (direction != null) ? normalizeDirection(direction) : null;
         this.lightLevel = lightLevel;
         this.directionType = directionType;
+        this.windowLocation = windowLocation;
+        this.imageUrl = imageUrl;
         this.directionFeatures = directionFeatures;
         this.directionPros = directionPros;
         this.directionCons = directionCons;
     }
 
+    public void updateDirection(Double direction) {
+        if (direction != null) {
+            this.direction = normalizeDirection(direction);
+        }
+    }
+
+    private Double normalizeDirection(Double d) {
+        return (d % 360 + 360) % 360;
+    }
+
+    public void assignHouse(House house) {
+        if (this.house != null) {
+            this.house.getMeasurements().remove(this);
+        }
+        this.house = house;
+        if (house != null && !house.getMeasurements().contains(this)) {
+            house.getMeasurements().add(this);
+        }
+    }
+    public void updateLightLevel(Double lightLevel) {
+        if (lightLevel != null) {
+            this.lightLevel = lightLevel;
+        }
+    }
+
     public void updateDirectionInfo(Double direction, String type, String features, String pros, String cons) {
-        updateDirection(direction);
+        updateDirection(direction); // 내부의 normalizeDirection 활용
         this.directionType = type;
         this.directionFeatures = features;
         this.directionPros = pros;
@@ -56,22 +87,9 @@ public class Measurement {
     }
 
 
-    public void updateDirection(Double direction) {
-        if (direction != null) {
-            this.direction = (direction < 0 || direction >= 360) ? direction % 360 : direction;
-        }
-    }
-
-    public void updateLightLevel(Double lightLevel) {
-        if (lightLevel != null) {
-            this.lightLevel = lightLevel;
-        }
-    }
-
-    public void assignHouse(House house) {
-        this.house = house;
-        if (house != null && !house.getMeasurements().contains(this)) {
-            house.getMeasurements().add(this);
+    public void updateImageUrl(String imageUrl) {
+        if (imageUrl != null && !imageUrl.isBlank()) {
+            this.imageUrl = imageUrl;
         }
     }
 }

@@ -12,6 +12,7 @@ import java.util.stream.IntStream;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import ziply.review.domain.House;
 import ziply.review.domain.HouseStatus;
 import ziply.review.domain.Measurement;
@@ -20,7 +21,6 @@ import ziply.review.dto.request.MeasurementRequest;
 import ziply.review.dto.response.DirectionGroupResponse;
 import ziply.review.dto.response.HouseSunlightResponse;
 import ziply.review.dto.response.MeasurementCardResponse;
-import ziply.review.dto.response.SearchCardResponse;
 import ziply.review.repository.HouseRepository;
 import ziply.review.repository.MeasurementRepository;
 import ziply.review.repository.SearchCardRepository;
@@ -31,39 +31,55 @@ import ziply.review.repository.SearchCardRepository;
 @Transactional
 public class MeasurementService {
 
-    private static final double MAX_LUX_STANDARD = 2500.0;
     private final SearchCardRepository searchCardRepository;
     private final HouseRepository houseRepository;
     private final MeasurementRepository measurementRepository;
     private final DirectionMapper directionMapper;
+    private final ImageUploadService imageUploadService;
 
     @Transactional
-    public void addBulkMeasurements(Long userId, Long houseId, List<MeasurementRequest> requests) {
+    public void addBulkMeasurements(Long userId, Long houseId,
+                                    List<MeasurementRequest> requests,
+                                    List<String> imageUrls) { // 이미지 URL 리스트 추가
         House house = houseRepository.findById(houseId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 하우스가 없습니다."));
 
+        // 1. 권한 체크
         if (!house.getSearchCard().getUserId().equals(userId)) {
             throw new IllegalStateException("권한이 없습니다.");
         }
 
+        // 2. 비즈니스 제약 조건 체크
         if (requests.size() > 3) {
             throw new IllegalArgumentException("측정 데이터는 최대 3개까지만 등록할 수 있습니다.");
         }
 
+
+
         for (int i = 0; i < requests.size(); i++) {
             int currentRound = i + 1;
             MeasurementRequest req = requests.get(i);
+            String currentImageUrl = imageUrls.get(i); // 현재 순서의 이미지 URL 추출
 
+            // 3. 중복 회차 체크
             boolean exists = measurementRepository.existsByHouseIdAndRound(houseId, currentRound);
 
             if (!exists) {
                 Double representativeLux = calculateRepresentativeLux(req.lightLevel());
-
                 DirectionMapper.DirectionInfo info = directionMapper.getInfo(req.direction());
 
-                Measurement measurement = Measurement.builder().house(house).round(currentRound)
-                        .direction(req.direction()).lightLevel(representativeLux).directionType(info.type())
-                        .directionFeatures(info.features()).directionPros(info.pros()).directionCons(info.cons())
+                // 4. 빌더에 imageUrl 추가
+                Measurement measurement = Measurement.builder()
+                        .house(house)
+                        .round(currentRound)
+                        .direction(req.direction())
+                        .lightLevel(representativeLux)
+                        .directionType(info.type())
+                        .directionFeatures(info.features())
+                        .directionPros(info.pros())
+                        .directionCons(info.cons())
+                        .windowLocation(req.windowLocation())
+                        .imageUrl(currentImageUrl) // 업로드된 Azure URL 저장
                         .build();
 
                 measurementRepository.save(measurement);
@@ -108,32 +124,32 @@ public class MeasurementService {
         House house = houseRepository.findById(houseId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 하우스가 없습니다."));
 
+        // 권한 체크
         if (!house.getSearchCard().getUserId().equals(userId)) {
             throw new IllegalStateException("권한이 없습니다.");
         }
 
+        // DB에서 해당 하우스의 측정 데이터를 회차순으로 가져옴
         List<Measurement> measurements = measurementRepository.findAllByHouseIdOrderByRoundAsc(houseId);
 
-        List<MeasurementCardResponse> response = new ArrayList<>();
-        for (int i = 1; i <= 3; i++) {
-            int currentRound = i;
-            Optional<Measurement> data = measurements.stream().filter(m -> m.getRound().equals(currentRound))
-                    .findFirst();
-
-            if (data.isPresent()) {
-                Measurement m = data.get();
-                response.add(new MeasurementCardResponse(currentRound, currentRound + "차 측정", true, true, "방향 측정 완료",
-                        "채광 측정 완료", m.getDirection(), m.getLightLevel()));
-            } else {
-                response.add(new MeasurementCardResponse(currentRound, currentRound + "차 측정", false, false, "방향 측정 미완료",
-                        "채광 측정 미완료", null, null));
-            }
-        }
-        return response;
+        // measurements 리스트에 있는 개수만큼만 DTO로 변환하여 반환
+        return measurements.stream()
+                .map(m -> new MeasurementCardResponse(
+                        m.getRound(),
+                        m.getRound() + "차 측정",
+                        true,
+                        true,
+                        "방향 측정 완료",
+                        "채광 측정 완료",
+                        m.getDirection(),
+                        m.getLightLevel(),
+                        m.getImageUrl()
+                ))
+                .toList();
     }
 
     @Transactional
-    public void reMeasure(Long userId, Long houseId, List<MeasurementRequest> requests) {
+    public void reMeasure(Long userId, Long houseId, List<MeasurementRequest> requests, List<MultipartFile> images) {
         House house = houseRepository.findById(houseId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 하우스가 없습니다."));
 
@@ -141,27 +157,49 @@ public class MeasurementService {
             throw new IllegalStateException("권한이 없습니다.");
         }
 
+        // 1. 이미지 개수 검증 (데이터 개수와 일치해야 함)
+        if (images != null && requests.size() != images.size()) {
+            throw new IllegalArgumentException("요청 데이터와 이미지의 개수가 일치하지 않습니다.");
+        }
+
+        // 2. 이미지 업로드 (Azure Storage로 전송 후 URL 리스트 반환)
+        List<String> imageUrls = (images != null) ? imageUploadService.uploadImages(images) : new ArrayList<>();
+
         List<Measurement> existingMeasurements = house.getMeasurements();
 
         for (int i = 0; i < requests.size(); i++) {
             int currentRound = i + 1;
             MeasurementRequest req = requests.get(i);
-
             Double representativeLux = calculateRepresentativeLux(req.lightLevel());
-
             DirectionMapper.DirectionInfo info = directionMapper.getInfo(req.direction());
+
+            // 현재 인덱스에 맞는 이미지 URL 가져오기
+            String currentImageUrl = (imageUrls.size() > i) ? imageUrls.get(i) : null;
 
             Optional<Measurement> measurementOpt = existingMeasurements.stream()
                     .filter(m -> m.getRound().equals(currentRound)).findFirst();
 
             if (measurementOpt.isPresent()) {
+                // [수정] 기존 데이터 업데이트 시 이미지 URL도 함께 갱신
                 Measurement m = measurementOpt.get();
                 m.updateLightLevel(representativeLux);
                 m.updateDirectionInfo(req.direction(), info.type(), info.features(), info.pros(), info.cons());
+
+                if (currentImageUrl != null) {
+                    m.updateImageUrl(currentImageUrl); // 엔티티에 해당 메서드 필요
+                }
             } else {
-                Measurement newMeasurement = Measurement.builder().house(house).round(currentRound)
-                        .direction(req.direction()).lightLevel(representativeLux).directionType(info.type())
-                        .directionFeatures(info.features()).directionPros(info.pros()).directionCons(info.cons())
+                // [추가] 데이터가 없던 회차는 새로 생성
+                Measurement newMeasurement = Measurement.builder()
+                        .house(house)
+                        .round(currentRound)
+                        .direction(req.direction())
+                        .lightLevel(representativeLux)
+                        .directionType(info.type())
+                        .directionFeatures(info.features())
+                        .directionPros(info.pros())
+                        .directionCons(info.cons())
+                        .imageUrl(currentImageUrl) // 새 이미지 저장
                         .build();
                 measurementRepository.save(newMeasurement);
             }
@@ -169,7 +207,6 @@ public class MeasurementService {
 
         house.updateStatus(HouseStatus.AFTER);
     }
-
     @Transactional
     public void deleteMeasurement(Long userId, Long houseId, Integer round) {
         House house = houseRepository.findById(houseId)

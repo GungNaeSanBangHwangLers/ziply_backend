@@ -8,9 +8,16 @@ public record MeasurementRequest(
         Double direction,
 
         @Schema(description = "20회 측정된 실내 조도 리스트 (Lux)",
-                example = "[1100.0, 1105.0, 1098.0, 1120.0, ...]")
+                example = "[1100.0, 1105.0, 1098.0, 1120.0]")
         List<Double> lightLevel,
 
         @Schema(description = "측정 회차 (1회차, 2회차 등)", example = "1")
-        Integer round
+        Integer round,
+
+        @Schema(description = "창문 혹은 측정 위치 (예: 거실, 침실 1 등)", example = "거실")
+        String windowLocation,
+
+        @Schema(description = "측정 시 첨부된 이미지 URL",
+                example = "https://s3.ap-northeast-2.amazonaws.com/ziply/review/image1.jpg")
+        String imageUrl
 ) {}
