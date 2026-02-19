@@ -1,5 +1,6 @@
 package ziply.review.service;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -9,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ziply.review.domain.House;
+import ziply.review.domain.Measurement;
 import ziply.review.domain.SearchCard;
 import ziply.review.dto.request.HouseCreateRequest;
 import ziply.review.dto.request.HouseUpdateRequest;
@@ -111,6 +113,12 @@ public class HouseService {
                             .address(house.getAddress())
                             .visitTime(house.getVisitDateTime())
                             .label(label)
+                            .imageUrls(house.getMeasurements().stream()
+                                    .filter(m -> m.getImageUrl() != null && !m.getImageUrl().isBlank())
+                                    .sorted(Comparator.comparing(Measurement::getRound,
+                                            Comparator.nullsLast(Comparator.naturalOrder())))
+                                    .map(Measurement::getImageUrl)
+                                    .collect(Collectors.toList()))
                             .build();
                 })
                 .collect(Collectors.toList());
