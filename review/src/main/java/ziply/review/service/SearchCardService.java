@@ -62,20 +62,42 @@ public class SearchCardService {
 
         LocalDate calculatedStart = LocalDate.now();
         LocalDate calculatedEnd = null;
-
         if (!pendingHouses.isEmpty()) {
             List<LocalDateTime> dateTimes = pendingHouses.stream()
                     .map(House::getVisitDateTime)
                     .filter(Objects::nonNull)
                     .toList();
-
             if (!dateTimes.isEmpty()) {
                 calculatedStart = dateTimes.stream().min(LocalDateTime::compareTo).get().toLocalDate();
                 calculatedEnd = dateTimes.stream().max(LocalDateTime::compareTo).get().toLocalDate();
             }
         }
 
-        SearchCard searchCard = new SearchCard(userId, "새로운 탐색 카드", calculatedStart, calculatedEnd);
+        var pastReq = request.getPastResidence();
+        Double pastLat = pastReq.getLatitude();
+        Double pastLng = pastReq.getLongitude();
+
+        if (pastLat == null || pastLng == null) {
+            try {
+                GeocodingResultResponse geo = geocodingService.geocodeAddress(pastReq.getAddress());
+                pastLat = geo.getLatitude();
+                pastLng = geo.getLongitude();
+            } catch (Exception e) {
+                log.warn("[V3] 이전 주거지 지오코딩 실패: {}", pastReq.getAddress());
+            }
+        }
+
+        SearchCard searchCard = SearchCard.builder()
+                .userId(userId)
+                .title("새로운 탐색 카드")
+                .startDate(calculatedStart)
+                .endDate(calculatedEnd)
+                .pastAddress(pastReq.getAddress())
+                .pastLatitude(pastLat)
+                .pastLongitude(pastLng)
+                .pastAdvantages(pastReq.getAdvantages())
+                .pastDisadvantages(pastReq.getDisadvantages())
+                .build();
 
         if (request.getBasePointAddress() != null && !request.getBasePointAddress().isBlank()) {
             try {

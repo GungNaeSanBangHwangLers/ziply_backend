@@ -2,6 +2,7 @@ package ziply.review.domain;
 
 import jakarta.persistence.*;
 import java.util.UUID;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.CreatedDate;
@@ -45,13 +46,37 @@ public class SearchCard {
     @OneToMany(mappedBy = "searchCard")
     private List<House> houses = new ArrayList<>();
 
-    public SearchCard(Long userId, String title, LocalDate startDate, LocalDate endDate) {
+    private String pastAddress;
+    private Double pastLatitude;
+    private Double pastLongitude;
+
+    @ElementCollection
+    @CollectionTable(name = "past_advantages", joinColumns = @JoinColumn(name = "search_card_id"))
+    @Column(name = "advantage")
+    private List<String> pastAdvantages = new ArrayList<>();
+
+    @ElementCollection
+    @CollectionTable(name = "past_disadvantages", joinColumns = @JoinColumn(name = "search_card_id"))
+    @Column(name = "disadvantage")
+    private List<String> pastDisadvantages = new ArrayList<>();
+
+    @Builder
+    public SearchCard(Long userId, String title, LocalDate startDate, LocalDate endDate,
+                      String pastAddress, Double pastLatitude, Double pastLongitude,
+                      List<String> pastAdvantages, List<String> pastDisadvantages) {
         this.userId = userId;
         this.title = title;
         this.startDate = startDate;
+        this.endDate = endDate;
         this.createdAt = LocalDateTime.now();
         this.status = SearchCardStatus.PLANNED;
-        this.endDate = endDate;
+
+        this.pastAddress = pastAddress;
+        this.pastLatitude = pastLatitude;
+        this.pastLongitude = pastLongitude;
+
+        this.pastAdvantages = (pastAdvantages != null) ? pastAdvantages : new ArrayList<>();
+        this.pastDisadvantages = (pastDisadvantages != null) ? pastDisadvantages : new ArrayList<>();
     }
 
     public void addBasePoint(BasePoint basePoint) {
