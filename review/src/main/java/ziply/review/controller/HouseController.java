@@ -18,7 +18,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import ziply.review.dto.request.HouseCreateRequest;
 import ziply.review.dto.request.HouseUpdateRequest;
+import ziply.review.dto.response.AddressInfo;
 import ziply.review.dto.response.HouseListResponse;
+import ziply.review.dto.response.UserAddressResponse;
 import ziply.review.service.HouseService;
 
 import java.util.UUID;
@@ -65,5 +67,12 @@ public class HouseController {
                                             @AuthenticationPrincipal Long userId) {
         houseService.deleteHouse(houseId, userId);
         return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "유저의 전체 방문 주소 조회", description = "로그인한 유저가 등록했던 모든 주소를 중복 없이 가져옵니다.")
+    @GetMapping("/user/addresses")
+    public ResponseEntity<UserAddressResponse> getAllUserAddresses(@AuthenticationPrincipal Long userId) {
+        List<AddressInfo> addressInfos = houseService.getAllUniqueAddresses(userId);
+        return ResponseEntity.ok(new UserAddressResponse(addressInfos));
     }
 }

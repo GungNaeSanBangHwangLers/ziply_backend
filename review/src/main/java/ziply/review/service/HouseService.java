@@ -16,6 +16,7 @@ import ziply.review.dto.request.HouseCreateRequest;
 import ziply.review.dto.request.HouseUpdateRequest;
 import ziply.review.dto.response.GeocodingResultResponse;
 import ziply.review.dto.response.HouseListResponse;
+import ziply.review.dto.response.AddressInfo;
 import ziply.review.event.HouseCreatedEvent;
 import ziply.review.event.HouseCreatedEvent.BasePointDetail;
 import ziply.review.event.HouseUpdatedEvent;
@@ -95,6 +96,10 @@ public class HouseService {
             producerService.sendHouseCreatedEvent(event);
         });
         return savedHouses.stream().map(House::getId).toList();
+    }
+
+    public List<AddressInfo> getAllUniqueAddresses(Long userId) {
+        return houseRepository.findDistinctAddressInfosByUserId(userId);
     }
 
     public List<HouseListResponse> getHousesBySearchCard(UUID searchCardId, Long userId) {
