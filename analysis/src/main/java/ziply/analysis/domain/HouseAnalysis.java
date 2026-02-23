@@ -7,6 +7,7 @@ import lombok.*;
 @Entity
 @Table(name = "house_analysis")
 @Getter
+@Setter
 @Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
@@ -38,4 +39,9 @@ public class HouseAnalysis {
 
     private Integer dayScore;
     private Integer nightScore;
+
+    private Integer safetyScore;
+    private Integer policeCount;
+    private Integer streetlightCount;
+    private Integer cctvCount;
 }

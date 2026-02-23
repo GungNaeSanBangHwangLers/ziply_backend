@@ -10,7 +10,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import ziply.analysis.dto.response.BasePointAnalysisDto;
-import ziply.analysis.dto.response.SearchCardScoreAnalysis;
+import ziply.analysis.dto.response.LifeScoreAnalysisResponse;
+import ziply.analysis.dto.response.SafetyAnalysisResponse;
 import ziply.analysis.service.RouteAnalysisService;
 
 @RestController
@@ -21,15 +22,23 @@ public class RouteAnalysisController {
     private final RouteAnalysisService routeAnalysisService;
 
     @GetMapping("/distance/{searchCardId}")
-    public ResponseEntity<List<BasePointAnalysisDto>> getSearchCardDistanceAnalysis(@PathVariable UUID searchCardId,
-                                                                                    @AuthenticationPrincipal Long userId) {
-        return ResponseEntity.ok(routeAnalysisService.getSearchCardDistanceAnalysis(searchCardId, userId));
-    }
-    @GetMapping("/score/{searchCardId}")
-    public ResponseEntity<List<SearchCardScoreAnalysis>> getSearchCardScoreAnalysis(
+    public ResponseEntity<List<BasePointAnalysisDto>> getSearchCardDistanceAnalysis(
             @PathVariable UUID searchCardId,
             @AuthenticationPrincipal Long userId) {
-        return ResponseEntity.ok(routeAnalysisService.getSearchCardScoreAnalysis(searchCardId, userId));
+        return ResponseEntity.ok(routeAnalysisService.getSearchCardDistanceAnalysis(searchCardId, userId));
     }
 
+    @GetMapping("/life/{searchCardId}")
+    public ResponseEntity<List<LifeScoreAnalysisResponse>> getLifeScoreAnalysis(
+            @PathVariable UUID searchCardId,
+            @AuthenticationPrincipal Long userId) {
+        return ResponseEntity.ok(routeAnalysisService.getLifeScoreAnalysis(searchCardId, userId));
+    }
+
+    @GetMapping("/safety/{searchCardId}")
+    public ResponseEntity<List<SafetyAnalysisResponse>> getSafetyAnalysis(
+            @PathVariable UUID searchCardId,
+            @AuthenticationPrincipal Long userId) {
+        return ResponseEntity.ok(routeAnalysisService.getSafetyAnalysis(searchCardId, userId));
+    }
 }

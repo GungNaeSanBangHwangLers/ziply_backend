@@ -17,7 +17,9 @@ public class DataCheckService {
 
     private final DataSource dataSource;
 
-    public boolean isDataAlreadyLoaded(String tableName) {
+    public boolean isDataAlreadyLoaded(String type) {
+        // 1. 입력받은 type을 실제 DB 테이블명으로 변환 (매핑 로직 호출)
+        String tableName = getActualTableName(type);
         String sql = "SELECT COUNT(*) FROM " + tableName;
 
         try (Connection conn = dataSource.getConnection();
@@ -26,12 +28,25 @@ public class DataCheckService {
 
             if (rs.next()) {
                 int count = rs.getInt(1);
-                log.debug("Table '{}' record count: {}", tableName, count);
+                log.info("[DataCheck] Type: '{}' -> Table: '{}' | Count: {}", type, tableName, count);
                 return count > 0;
             }
         } catch (SQLException e) {
-            log.error("Failed to check data existence in table: {}", tableName, e);
+            // 테이블이 없거나 쿼리 실패 시 로그를 남기고 false 반환 (배치 실행 유도)
+            log.warn("[DataCheck] Cannot check table '{}'. It might not exist yet. Error: {}", tableName, e.getMessage());
         }
         return false;
+    }
+
+    private String getActualTableName(String type) {
+        return switch (type) {
+            case "cctvs" -> "cctv";           // 'cctvs' 요청 시 실제 테이블명 'cctv' 사용
+            case "police_stations" -> "police_stations";
+            case "street_lights" -> "street_lights";
+            case "bus_stop_location" -> "bus_stop_location";
+            case "bus_operations" -> "bus_operations";
+            case "bus_stop_stats" -> "bus_stop_stats";
+            default -> type;                  // 그 외에는 입력값 그대로 사용
+        };
     }
 }

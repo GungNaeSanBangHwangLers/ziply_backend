@@ -34,12 +34,13 @@ public class SearchCardService {
 
     private final SearchCardRepository searchCardRepository;
     private final GeocodingService geocodingService;
-    private  final HouseRepository houseRepository;
-    private final ReviewProducerService  reviewProducerService;
+    private final HouseRepository houseRepository;
+    private final ReviewProducerService reviewProducerService;
     private final BasePointRepository basePointRepository;
 
     @Transactional
     public UUID createSearchCard(Long userId, SearchCardCreateRequest request) {
+        // 1. 집 정보 생성 및 지오코딩 처리
         var houseRequests = request.getHouses() != null ? request.getHouses() : new ArrayList<SearchCardCreateRequest.HouseCreateRequest>();
 
         List<House> pendingHouses = houseRequests.stream()
@@ -60,6 +61,7 @@ public class SearchCardService {
                 .filter(Objects::nonNull)
                 .toList();
 
+        // 2. 탐색 카드 기간(시작일/종료일) 계산
         LocalDate calculatedStart = LocalDate.now();
         LocalDate calculatedEnd = null;
         if (!pendingHouses.isEmpty()) {
@@ -73,6 +75,7 @@ public class SearchCardService {
             }
         }
 
+        // 3. 이전 주거지 정보 및 지오코딩 처리
         var pastReq = request.getPastResidence();
         Double pastLat = pastReq.getLatitude();
         Double pastLng = pastReq.getLongitude();
@@ -87,18 +90,20 @@ public class SearchCardService {
             }
         }
 
-        SearchCard searchCard = SearchCard.builder()
-                .userId(userId)
-                .title("새로운 탐색 카드")
-                .startDate(calculatedStart)
-                .endDate(calculatedEnd)
-                .pastAddress(pastReq.getAddress())
-                .pastLatitude(pastLat)
-                .pastLongitude(pastLng)
-                .pastAdvantages(pastReq.getAdvantages())
-                .pastDisadvantages(pastReq.getDisadvantages())
-                .build();
+        // 4. 탐색 카드 객체 생성 (일반 생성자 사용 - 장/단점 리스트 포함)
+        SearchCard searchCard = new SearchCard(
+                userId,
+                "새로운 탐색 카드",
+                calculatedStart,
+                calculatedEnd,
+                pastReq.getAddress(),
+                pastLat,
+                pastLng,
+                pastReq.getAdvantages(),
+                pastReq.getDisadvantages()
+        );
 
+        // 5. 기점 정보가 있을 경우 추가
         if (request.getBasePointAddress() != null && !request.getBasePointAddress().isBlank()) {
             try {
                 GeocodingResultResponse geoResult = geocodingService.geocodeAddress(request.getBasePointAddress());
@@ -108,6 +113,7 @@ public class SearchCardService {
             }
         }
 
+        // 6. 탐색 카드 및 관련 집 정보 저장
         SearchCard savedCard = searchCardRepository.save(searchCard);
 
         for (House house : pendingHouses) {
@@ -115,6 +121,7 @@ public class SearchCardService {
         }
         List<House> savedHouses = houseRepository.saveAll(pendingHouses);
 
+        // 7. 집 생성 이벤트 발행
         if (!savedHouses.isEmpty()) {
             sendHouseCreatedEvents(savedCard, savedHouses);
         }
@@ -164,7 +171,6 @@ public class SearchCardService {
     @Transactional(readOnly = true)
     public List<SearchCardResponse> getSearchCards(Long userId) {
         List<SearchCard> cards = searchCardRepository.findAllByUserId(userId);
-
         return cards.stream().map(SearchCardResponse::from).collect(Collectors.toList());
     }
 

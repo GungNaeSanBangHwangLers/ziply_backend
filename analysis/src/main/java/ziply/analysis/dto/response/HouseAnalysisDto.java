@@ -1,7 +1,9 @@
 package ziply.analysis.dto.response;
 
+import lombok.Builder;
 import ziply.analysis.domain.HouseAnalysis;
 
+@Builder
 public record HouseAnalysisDto(
         Long houseId,
         String label,

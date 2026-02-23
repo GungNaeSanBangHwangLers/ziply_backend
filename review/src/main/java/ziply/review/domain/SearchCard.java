@@ -2,7 +2,6 @@ package ziply.review.domain;
 
 import jakarta.persistence.*;
 import java.util.UUID;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.CreatedDate;
@@ -60,7 +59,7 @@ public class SearchCard {
     @Column(name = "disadvantage")
     private List<String> pastDisadvantages = new ArrayList<>();
 
-    @Builder
+    // 빌더 대신 사용하는 생성자
     public SearchCard(Long userId, String title, LocalDate startDate, LocalDate endDate,
                       String pastAddress, Double pastLatitude, Double pastLongitude,
                       List<String> pastAdvantages, List<String> pastDisadvantages) {
@@ -70,13 +69,17 @@ public class SearchCard {
         this.endDate = endDate;
         this.createdAt = LocalDateTime.now();
         this.status = SearchCardStatus.PLANNED;
-
         this.pastAddress = pastAddress;
         this.pastLatitude = pastLatitude;
         this.pastLongitude = pastLongitude;
 
-        this.pastAdvantages = (pastAdvantages != null) ? pastAdvantages : new ArrayList<>();
-        this.pastDisadvantages = (pastDisadvantages != null) ? pastDisadvantages : new ArrayList<>();
+        // 리스트 필드가 이미 ArrayList로 초기화되어 있으므로 addAll로 내용만 복사
+        if (pastAdvantages != null) {
+            this.pastAdvantages.addAll(pastAdvantages);
+        }
+        if (pastDisadvantages != null) {
+            this.pastDisadvantages.addAll(pastDisadvantages);
+        }
     }
 
     public void addBasePoint(BasePoint basePoint) {
