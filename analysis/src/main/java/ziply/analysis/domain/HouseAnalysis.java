@@ -37,6 +37,8 @@ public class HouseAnalysis {
 
     private Integer carTimeMin;
 
+    private Integer bikeTimeMin;
+
     private Integer dayScore;
     private Integer nightScore;
 

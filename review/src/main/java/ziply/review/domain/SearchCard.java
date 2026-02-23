@@ -45,41 +45,13 @@ public class SearchCard {
     @OneToMany(mappedBy = "searchCard")
     private List<House> houses = new ArrayList<>();
 
-    private String pastAddress;
-    private Double pastLatitude;
-    private Double pastLongitude;
-
-    @ElementCollection
-    @CollectionTable(name = "past_advantages", joinColumns = @JoinColumn(name = "search_card_id"))
-    @Column(name = "advantage")
-    private List<String> pastAdvantages = new ArrayList<>();
-
-    @ElementCollection
-    @CollectionTable(name = "past_disadvantages", joinColumns = @JoinColumn(name = "search_card_id"))
-    @Column(name = "disadvantage")
-    private List<String> pastDisadvantages = new ArrayList<>();
-
-    // 빌더 대신 사용하는 생성자
-    public SearchCard(Long userId, String title, LocalDate startDate, LocalDate endDate,
-                      String pastAddress, Double pastLatitude, Double pastLongitude,
-                      List<String> pastAdvantages, List<String> pastDisadvantages) {
+    public SearchCard(Long userId, String title, LocalDate startDate, LocalDate endDate) {
         this.userId = userId;
         this.title = title;
         this.startDate = startDate;
         this.endDate = endDate;
         this.createdAt = LocalDateTime.now();
         this.status = SearchCardStatus.PLANNED;
-        this.pastAddress = pastAddress;
-        this.pastLatitude = pastLatitude;
-        this.pastLongitude = pastLongitude;
-
-        // 리스트 필드가 이미 ArrayList로 초기화되어 있으므로 addAll로 내용만 복사
-        if (pastAdvantages != null) {
-            this.pastAdvantages.addAll(pastAdvantages);
-        }
-        if (pastDisadvantages != null) {
-            this.pastDisadvantages.addAll(pastDisadvantages);
-        }
     }
 
     public void addBasePoint(BasePoint basePoint) {

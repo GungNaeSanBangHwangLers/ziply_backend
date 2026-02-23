@@ -40,7 +40,6 @@ public class SearchCardService {
 
     @Transactional
     public UUID createSearchCard(Long userId, SearchCardCreateRequest request) {
-        // 1. 집 정보 생성 및 지오코딩 처리
         var houseRequests = request.getHouses() != null ? request.getHouses() : new ArrayList<SearchCardCreateRequest.HouseCreateRequest>();
 
         List<House> pendingHouses = houseRequests.stream()
@@ -75,45 +74,30 @@ public class SearchCardService {
             }
         }
 
-        // 3. 이전 주거지 정보 및 지오코딩 처리
-        var pastReq = request.getPastResidence();
-        Double pastLat = pastReq.getLatitude();
-        Double pastLng = pastReq.getLongitude();
-
-        if (pastLat == null || pastLng == null) {
-            try {
-                GeocodingResultResponse geo = geocodingService.geocodeAddress(pastReq.getAddress());
-                pastLat = geo.getLatitude();
-                pastLng = geo.getLongitude();
-            } catch (Exception e) {
-                log.warn("[V3] 이전 주거지 지오코딩 실패: {}", pastReq.getAddress());
-            }
-        }
-
-        // 4. 탐색 카드 객체 생성 (일반 생성자 사용 - 장/단점 리스트 포함)
+        // 3. 탐색 카드 객체 생성 (이전 주소/장단점 파라미터 제거됨)
         SearchCard searchCard = new SearchCard(
                 userId,
                 "새로운 탐색 카드",
                 calculatedStart,
-                calculatedEnd,
-                pastReq.getAddress(),
-                pastLat,
-                pastLng,
-                pastReq.getAdvantages(),
-                pastReq.getDisadvantages()
+                calculatedEnd
         );
 
-        // 5. 기점 정보가 있을 경우 추가
+        // 4. 기점 정보(BasePoint)가 있을 경우 추가 및 지오코딩
         if (request.getBasePointAddress() != null && !request.getBasePointAddress().isBlank()) {
             try {
                 GeocodingResultResponse geoResult = geocodingService.geocodeAddress(request.getBasePointAddress());
-                searchCard.addBasePoint(new BasePoint("기점", request.getBasePointAddress(), geoResult.getLatitude(), geoResult.getLongitude()));
+                searchCard.addBasePoint(new BasePoint(
+                        "기점",
+                        request.getBasePointAddress(),
+                        geoResult.getLatitude(),
+                        geoResult.getLongitude()
+                ));
             } catch (Exception e) {
-                log.error("[INTEGRATED] 기점 지오코딩 실패");
+                log.error("[INTEGRATED] 기점 지오코딩 실패: {}", request.getBasePointAddress());
             }
         }
 
-        // 6. 탐색 카드 및 관련 집 정보 저장
+        // 5. 탐색 카드 및 관련 집 정보 저장
         SearchCard savedCard = searchCardRepository.save(searchCard);
 
         for (House house : pendingHouses) {
@@ -121,7 +105,7 @@ public class SearchCardService {
         }
         List<House> savedHouses = houseRepository.saveAll(pendingHouses);
 
-        // 7. 집 생성 이벤트 발행
+        // 6. 집 생성 이벤트 발행 (Kafka/Message Queue 등)
         if (!savedHouses.isEmpty()) {
             sendHouseCreatedEvents(savedCard, savedHouses);
         }
