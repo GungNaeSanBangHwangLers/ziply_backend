@@ -10,7 +10,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ziply.review.domain.House;
-import ziply.review.domain.Measurement;
+import ziply.review.domain.HouseImage; // 추가됨
+import ziply.review.domain.HouseStatus;
 import ziply.review.domain.SearchCard;
 import ziply.review.dto.request.HouseCreateRequest;
 import ziply.review.dto.request.HouseUpdateRequest;
@@ -54,7 +55,7 @@ public class HouseService {
             try {
                 geocodingService.geocodeAddress(request);
             } catch (RuntimeException e) {
-                log.error("[HOUSE] Geocoding 실패: 주소 {} 처리 중 오류 발생. 해당 집을 건너뜁니다.", request.getAddress());
+                log.error("[HOUSE] Geocoding 실패: 주소 {} 처리 중 오류 발생. 해당 집을 건너뜜.", request.getAddress());
             }
         });
 
@@ -70,8 +71,6 @@ public class HouseService {
                 .collect(Collectors.toList());
 
         List<House> savedHouses = houseRepository.saveAll(houseList);
-        log.info("[HOUSE] Successfully saved {} houses to DB. {} were skipped due to Geocoding failure.",
-                savedHouses.size(), requests.size() - savedHouses.size());
 
         List<BasePointDetail> basePointDetails = searchCard.getBasePoints().stream()
                 .map(bp -> BasePointDetail.builder()
@@ -102,6 +101,7 @@ public class HouseService {
         return houseRepository.findDistinctAddressInfosByUserId(userId);
     }
 
+    @Transactional(readOnly = true)
     public List<HouseListResponse> getHousesBySearchCard(UUID searchCardId, Long userId) {
         searchCardRepository.findByIdAndUserId(searchCardId, userId)
                 .orElseThrow(() -> new IllegalArgumentException("접근 권한이 없거나 존재하지 않는 카드입니다."));
@@ -113,17 +113,18 @@ public class HouseService {
                     House house = houses.get(i);
                     String label = String.valueOf((char) ('A' + i));
 
+                    // 수정된 부분: Measurement 가 아닌 HouseImage 테이블에서 이미지를 가져옴
+                    List<String> imageUrls = house.getHouseImages().stream()
+                            .map(HouseImage::getImageUrl)
+                            .filter(url -> url != null && !url.isBlank())
+                            .collect(Collectors.toList());
+
                     return HouseListResponse.builder()
                             .houseId(house.getId())
                             .address(house.getAddress())
                             .visitTime(house.getVisitDateTime())
                             .label(label)
-                            .imageUrls(house.getMeasurements().stream()
-                                    .filter(m -> m.getImageUrl() != null && !m.getImageUrl().isBlank())
-                                    .sorted(Comparator.comparing(Measurement::getRound,
-                                            Comparator.nullsLast(Comparator.naturalOrder())))
-                                    .map(Measurement::getImageUrl)
-                                    .collect(Collectors.toList()))
+                            .imageUrls(imageUrls)
                             .build();
                 })
                 .collect(Collectors.toList());
@@ -140,7 +141,6 @@ public class HouseService {
         house.update(newAddress, request.getVisitDateTime());
 
         if (!oldAddress.equals(newAddress)) {
-
             GeocodingResultResponse geocodingResult = geocodingService.geocodeAddress(newAddress);
 
             List<HouseUpdatedEvent.BasePointDetail> basePoints = house.getSearchCard().getBasePoints().stream()
@@ -185,7 +185,6 @@ public class HouseService {
         if (remainingHouses == 0) {
             log.info("[Review] 남은 집이 없어 주거탐색카드({})를 삭제합니다.", card.getId());
             searchCardRepository.delete(card);
-
             reviewProducerService.sendCardDeletedEvent(card.getId());
         }
 

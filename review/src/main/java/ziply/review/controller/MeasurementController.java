@@ -10,13 +10,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import ziply.review.dto.request.MeasurementRequest;
+import ziply.review.dto.request.CombinedMeasurementRequest;
 import ziply.review.dto.response.DirectionGroupResponse;
 import ziply.review.dto.response.HouseSunlightResponse;
 import ziply.review.dto.response.MeasurementCardResponse;
-import ziply.review.service.ImageUploadService;
 import ziply.review.service.MeasurementService;
-
 
 @Tag(name = "Measurement API", description = "하우스 측정 데이터 관리 API")
 @RestController
@@ -25,76 +23,75 @@ import ziply.review.service.MeasurementService;
 public class MeasurementController {
 
     private final MeasurementService measurementService;
-    private final ImageUploadService imageUploadService;
 
-    @Operation(summary = "탐색 카드별 평균 채광 점수 조회", description = "특정 탐색 카드에 속한 모든 하우스의 채광 측정값 평균 점수를 반환합니다.")
+    @Operation(summary = "이미지 업로드", description = "이미지만 별도로 여러 장 업로드합니다.")
+    @PostMapping(value = "/{houseId}/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Void> uploadImages(
+            @PathVariable Long houseId,
+            @RequestPart("images") List<MultipartFile> images,
+            @AuthenticationPrincipal Long userId) {
+        measurementService.uploadImages(userId, houseId, images);
+        return ResponseEntity.status(201).build();
+    }
+
+    @Operation(summary = "측정 데이터 통합 저장", description = "방향과 채광 데이터를 한 번에 묶어서 저장합니다. (자동으로 n차 측정으로 저장)")
+    @PostMapping("/{houseId}/measure")
+    public ResponseEntity<Void> saveMeasurement(
+            @PathVariable Long houseId,
+            @RequestBody CombinedMeasurementRequest request,
+            @AuthenticationPrincipal Long userId) {
+        measurementService.saveCombinedMeasurement(userId, houseId, request);
+        return ResponseEntity.status(201).build();
+    }
+
+    @Operation(summary = "특정 회차(Round) 측정 데이터 삭제", description = "특정 회차만 삭제하고 뒷번호를 재정렬합니다.")
+    @DeleteMapping("/{houseId}/measure/{round}")
+    public ResponseEntity<Void> deleteRound(
+            @PathVariable Long houseId,
+            @PathVariable Integer round,
+            @AuthenticationPrincipal Long userId) {
+        measurementService.deleteMeasurementByRound(userId, houseId, round);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "하우스 측정 데이터 전체 삭제", description = "하우스의 모든 측정값과 이미지를 삭제합니다.")
+    @DeleteMapping("/{houseId}")
+    public ResponseEntity<Void> deleteMeasurement(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long houseId) {
+        measurementService.deleteHouseMeasurement(userId, houseId);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "하우스 측정 카드 데이터 조회")
+    @GetMapping("/{houseId}/card")
+    public ResponseEntity<List<MeasurementCardResponse>> getMeasurementCard(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long houseId) {
+        return ResponseEntity.ok(measurementService.getMeasurementCardData(userId, houseId));
+    }
+
+    @Operation(summary = "탐색 카드별 평균 채광 점수 조회")
     @GetMapping("/score/{cardId}")
     public ResponseEntity<List<HouseSunlightResponse>> getCardAverageScore(
             @PathVariable UUID cardId,
             @AuthenticationPrincipal Long userId) {
-
-        List<HouseSunlightResponse> response = measurementService.getHouseSunlightScoresByCard(cardId, userId);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(measurementService.getHouseSunlightScoresByCard(cardId, userId));
     }
 
-    @PostMapping(value = "/{houseId}/measure", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<Void> addMeasurements(
-            @PathVariable Long houseId,
-            @RequestPart("requests") List<MeasurementRequest> requests,
-            @RequestPart("images") List<MultipartFile> images,
-            @AuthenticationPrincipal Long userId
-    ){
-
-        List<String> imageUrls = images.stream()
-                .map(imageUploadService::upload)
-                .toList();
-
-        measurementService.addBulkMeasurements(userId, houseId, requests, imageUrls);
-
-        return ResponseEntity.status(201).build();
-    }
-
-    @Operation(summary = "하우스 측정 카드 데이터 조회", description = "이미지처럼 1~3차 방향/채광 측정 상태를 반환합니다.")
-    @GetMapping("/{houseId}/card")
-    public ResponseEntity<List<MeasurementCardResponse>> getMeasurementCard(@AuthenticationPrincipal Long userId,
-                                                                            @PathVariable Long houseId) {
-        List<MeasurementCardResponse> response = measurementService.getMeasurementCardData(userId, houseId);
-        return ResponseEntity.ok(response);
-    }
-
-    @Operation(summary = "하우스 측정 데이터 전체 다시 측정 (업데이트)", description = "1~3차 측정 데이터를 리스트로 받아 전체 수정합니다.")
-    @PatchMapping(value = "/{houseId}/measure", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<Void> reMeasureAll(
-            @AuthenticationPrincipal Long userId,
-            @PathVariable Long houseId,
-            @RequestPart("requests") List<MeasurementRequest> requests,
-            @RequestPart("images") List<MultipartFile> images) {
-
-        measurementService.reMeasure(userId, houseId, requests, images);
-        return ResponseEntity.ok().build();
-    }
-
-    @Operation(summary = "특정 차수 데이터 삭제", description = "지정한 회차(round)의 데이터만 삭제합니다. 순서는 유지됩니다.")
-    @DeleteMapping("/{houseId}/measure/{round}")
-    public ResponseEntity<Void> deleteMeasurement(@AuthenticationPrincipal Long userId, @PathVariable Long houseId,
-                                                  @PathVariable Integer round) {
-        measurementService.deleteMeasurement(userId, houseId, round);
-        return ResponseEntity.ok().build();
-    }
-
-    @Operation(summary = "향별 하우스 그룹화 조회", description = "특정 주거탐색카드 내의 하우스들을 향별로 묶어 하우스 ID 리스트와 해당 향의 특징/장단점을 반환합니다.")
+    @Operation(summary = "향별 하우스 그룹화 조회")
     @GetMapping("/card/{searchCardId}")
-    public ResponseEntity<List<DirectionGroupResponse>> getDirectionGroups(@AuthenticationPrincipal Long userId,
-                                                                           @PathVariable UUID searchCardId) {
+    public ResponseEntity<List<DirectionGroupResponse>> getDirectionGroups(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable UUID searchCardId) {
         return ResponseEntity.ok(measurementService.getDirectionGroups(userId, searchCardId));
     }
 
-    @Operation(summary = "하우스별 향 정보 조회", description = "특정 하우스 ID를 기반으로 해당 집의 향 정보와 특징/장단점을 반환합니다.")
+    @Operation(summary = "하우스별 향 정보 조회")
     @GetMapping("/house/{houseId}")
     public ResponseEntity<List<DirectionGroupResponse>> getDirectionGroupsByHouse(
             @AuthenticationPrincipal Long userId,
             @PathVariable Long houseId) {
-
         return ResponseEntity.ok(measurementService.getDirectionGroupsByHouse(userId, houseId));
     }
 }

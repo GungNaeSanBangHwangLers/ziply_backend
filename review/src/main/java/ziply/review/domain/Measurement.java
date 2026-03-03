@@ -26,9 +26,6 @@ public class Measurement {
     private String windowLocation;
 
     @Column(length = 1000)
-    private String imageUrl;
-
-    @Column(length = 1000)
     private String directionFeatures;
 
     @Column(length = 1000)
@@ -39,7 +36,7 @@ public class Measurement {
 
     @Builder
     public Measurement(House house, Integer round, Double direction, Double lightLevel,
-                       String directionType, String windowLocation, String imageUrl,
+                       String directionType, String windowLocation,
                        String directionFeatures, String directionPros, String directionCons) {
         this.house = house;
         this.round = round;
@@ -47,7 +44,6 @@ public class Measurement {
         this.lightLevel = lightLevel;
         this.directionType = directionType;
         this.windowLocation = windowLocation;
-        this.imageUrl = imageUrl;
         this.directionFeatures = directionFeatures;
         this.directionPros = directionPros;
         this.directionCons = directionCons;
@@ -72,6 +68,7 @@ public class Measurement {
             house.getMeasurements().add(this);
         }
     }
+
     public void updateLightLevel(Double lightLevel) {
         if (lightLevel != null) {
             this.lightLevel = lightLevel;
@@ -79,17 +76,10 @@ public class Measurement {
     }
 
     public void updateDirectionInfo(Double direction, String type, String features, String pros, String cons) {
-        updateDirection(direction); // 내부의 normalizeDirection 활용
+        updateDirection(direction);
         this.directionType = type;
         this.directionFeatures = features;
         this.directionPros = pros;
         this.directionCons = cons;
-    }
-
-
-    public void updateImageUrl(String imageUrl) {
-        if (imageUrl != null && !imageUrl.isBlank()) {
-            this.imageUrl = imageUrl;
-        }
     }
 }

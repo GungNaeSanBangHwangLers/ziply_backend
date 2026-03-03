@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Setter;
 
@@ -14,6 +15,8 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 @Table(name = "houses")
 public class House {
 
@@ -28,32 +31,31 @@ public class House {
     private String address;
 
     @Enumerated(EnumType.STRING)
+    @Builder.Default
     private HouseStatus status = HouseStatus.BEFORE;
 
     private LocalDateTime visitDateTime;
-
     private Double latitude;
     private Double longitude;
 
+    // 측정 데이터 연관관계
     @OneToMany(mappedBy = "house", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<Measurement> measurements = new ArrayList<>();
 
-    @Builder
-    public House(SearchCard searchCard, String address, LocalDateTime visitDateTime, Double latitude,
-                 Double longitude) {
-        this.searchCard = searchCard;
-        this.address = address;
-        this.visitDateTime = visitDateTime;
-        this.latitude = latitude;
-        this.longitude = longitude;
-    }
+    // 이미지 데이터 연관관계
+    @OneToMany(mappedBy = "house", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<HouseImage> houseImages = new ArrayList<>();
 
+    // 상태 업데이트 메서드
     public void updateStatus(HouseStatus status) {
         this.status = status;
     }
 
+    // 정보 수정 메서드
     public void update(String address, LocalDateTime visitDateTime) {
-        if (address != null && !address.isBlank()) {
+        if (address != null && !address.trim().isEmpty()) {
             this.address = address;
         }
         if (visitDateTime != null) {
@@ -61,6 +63,7 @@ public class House {
         }
     }
 
+    // 방문 일정에 따른 상태 동기화 로직
     public void syncStatus(LocalDate today) {
         if (this.status == HouseStatus.AFTER) {
             return;

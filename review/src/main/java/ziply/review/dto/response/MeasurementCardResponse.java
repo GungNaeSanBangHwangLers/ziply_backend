@@ -1,5 +1,7 @@
 package ziply.review.dto.response;
 
+import java.util.List;
+
 public record MeasurementCardResponse(
         Integer round,
         String title,
@@ -9,6 +11,6 @@ public record MeasurementCardResponse(
         String lightStatus,
         Double direction,
         Double lightLevel,
-        String imageUrl
+        List<String> imageUrls
 ) {
 }
