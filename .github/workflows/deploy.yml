@@ -2,12 +2,11 @@ name: Ziply Full CI/CD
 
 on:
   push:
-    branches: [ "dev", "main" ]
+    branches: [ "dev" ]
 
 jobs:
-  build-test-deploy:
+  build-and-push:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -17,51 +16,61 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
+          cache: gradle
 
-      # Gradle 캐시로 빌드 속도 UP
-      - name: Cache Gradle
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+      - name: Build All Services (Jar)
+        run: |
+          chmod +x ./gradlew
+          ./gradlew build -x test
 
-      - name: Make Gradle wrapper executable
-        run: chmod +x ./gradlew
-
-      # 1. 테스트 실행
-      - name: Run tests
-        run: ./gradlew clean test --no-daemon
-
-      # 2. 전 서비스 빌드
-      - name: Build All Services
-        run: ./gradlew build -x test
-
-      # 3. Docker Hub 로그인 (아까 설정한 시크릿 사용)
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # 4. 이미지 빌드 및 푸시 (분석 서비스 예시)
-      - name: Build and Push Analysis Service
+      # 각 서비스별로 이미지를 빌드하고 푸시합니다.
+      - name: Build and Push Images
         run: |
+          # 분석 서비스
           docker build -t ${{ secrets.DOCKER_USERNAME }}/analysis-service:latest ./analysis
           docker push ${{ secrets.DOCKER_USERNAME }}/analysis-service:latest
+          
+          # 리뷰 서비스
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/review-service:latest ./review
+          docker push ${{ secrets.DOCKER_USERNAME }}/review-service:latest
+          
+          # 유저 서비스
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/user-service:latest ./user
+          docker push ${{ secrets.DOCKER_USERNAME }}/user-service:latest
+          
+          # 인증 서비스
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/auth-service:latest ./auth
+          docker push ${{ secrets.DOCKER_USERNAME }}/auth-service:latest
+          
+          # 게이트웨이 서비스
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/gateway:latest ./gateway
+          docker push ${{ secrets.DOCKER_USERNAME }}/gateway:latest
+          
 
-      # 5. Azure VM 배포 (SSH 접속)
-      - name: Deploy to Azure VM
+  deploy-to-vm:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH into VM and Update
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VM_HOST }}
-          username: ${{ secrets.VM_USER }} # 등록한 이름 확인!
+          username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
           script: |
-            cd ~/ziply
-            # 도커 허브에서 이미지 땡겨오기
-            docker pull ${{ secrets.DOCKER_USERNAME }}/analysis-service:latest
-            # 서비스 재시작
-            docker-compose up -d analysis-service
+            cd /home/${{ secrets.VM_USER }}/ziply
+            
+            # 모든 이미지 최신으로 땡겨오기
+            docker-compose pull
+            
+            # 모든 서비스 재시작 (변경사항이 있는 것만 갈아끼워짐)
+            docker-compose up -d
+            
+            # 찌꺼기 이미지 삭제
             docker image prune -f
