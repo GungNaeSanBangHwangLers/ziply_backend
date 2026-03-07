@@ -10,7 +10,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import ziply.review.dto.request.CombinedMeasurementRequest;
+import ziply.review.dto.request.DirectionRequest;
+import ziply.review.dto.request.LightLevelRequest;
 import ziply.review.dto.response.DirectionGroupResponse;
 import ziply.review.dto.response.HouseSunlightResponse;
 import ziply.review.dto.response.MeasurementCardResponse;
@@ -34,13 +35,23 @@ public class MeasurementController {
         return ResponseEntity.status(201).build();
     }
 
-    @Operation(summary = "측정 데이터 통합 저장", description = "방향과 채광 데이터를 한 번에 묶어서 저장합니다. (자동으로 n차 측정으로 저장)")
-    @PostMapping("/{houseId}/measure")
-    public ResponseEntity<Void> saveMeasurement(
+    @Operation(summary = "방향 데이터 저장/수정", description = "특정 회차의 방향 데이터를 저장합니다.")
+    @PostMapping("/{houseId}/measure/direction")
+    public ResponseEntity<Void> saveDirection(
             @PathVariable Long houseId,
-            @RequestBody CombinedMeasurementRequest request,
+            @RequestBody DirectionRequest request,
             @AuthenticationPrincipal Long userId) {
-        measurementService.saveCombinedMeasurement(userId, houseId, request);
+        measurementService.saveDirection(userId, houseId, request);
+        return ResponseEntity.status(201).build();
+    }
+
+    @Operation(summary = "채광 데이터 저장/수정", description = "특정 회차의 채광 데이터를 저장합니다.")
+    @PostMapping("/{houseId}/measure/light")
+    public ResponseEntity<Void> saveLightLevel(
+            @PathVariable Long houseId,
+            @RequestBody LightLevelRequest request,
+            @AuthenticationPrincipal Long userId) {
+        measurementService.saveLightLevel(userId, houseId, request);
         return ResponseEntity.status(201).build();
     }
 

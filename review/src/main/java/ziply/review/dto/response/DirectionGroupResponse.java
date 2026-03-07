@@ -3,9 +3,15 @@ package ziply.review.dto.response;
 import java.util.List;
 
 public record DirectionGroupResponse(
-        String directionType,      // "남향"
-        String features,           // DB의 directionFeatures
-        String pros,               // DB의 directionPros
-        String cons,               // DB의 directionCons
-        List<Long> houseIds        // 해당 향을 가진 하우스 ID 리스트 (중복 제거)
-) {}
+        String houseAlias,      // "A", "B", "C" ...
+        Long houseId,
+        List<WindowDirectionDetail> windows // 한 집의 여러 창문 측정 결과
+) {
+    public record WindowDirectionDetail(
+            String windowLocation,  // "거실", "안방"
+            String directionType,   // "남향"
+            String features,        // "일조량이 풍부..."
+            String pros,            // "겨울에 따뜻..."
+            String cons             // "가구 변색 주의..."
+    ) {}
+}

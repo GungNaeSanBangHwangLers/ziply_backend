@@ -1,6 +1,7 @@
 package ziply.review.domain;
 
 import jakarta.persistence.*;
+import java.util.List;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -49,16 +50,32 @@ public class Measurement {
         this.directionCons = directionCons;
     }
 
-    public void updateDirection(Double direction) {
+    /**
+     * 방향 관련 정보 통합 업데이트
+     * Service에서 넘어오는 List<String> 타입을 DB 저장을 위해 String으로 변환합니다.
+     */
+    public void updateDirection(Double direction, String directionType, String features,
+                                String pros, String cons, String windowLocation) {
         if (direction != null) {
             this.direction = normalizeDirection(direction);
         }
+        this.directionType = directionType;
+        this.directionFeatures = features;
+        this.directionPros = pros;
+        this.directionCons = cons;
+        this.windowLocation = windowLocation;
     }
 
-    private Double normalizeDirection(Double d) {
-        return (d % 360 + 360) % 360;
+    /**
+     * 채광 정보 업데이트
+     */
+    public void updateLightLevel(Double lightLevel) {
+        this.lightLevel = lightLevel;
     }
 
+    /**
+     * 하우스 연관관계 설정 (양방향 편의 메서드)
+     */
     public void assignHouse(House house) {
         if (this.house != null) {
             this.house.getMeasurements().remove(this);
@@ -69,17 +86,10 @@ public class Measurement {
         }
     }
 
-    public void updateLightLevel(Double lightLevel) {
-        if (lightLevel != null) {
-            this.lightLevel = lightLevel;
-        }
-    }
-
-    public void updateDirectionInfo(Double direction, String type, String features, String pros, String cons) {
-        updateDirection(direction);
-        this.directionType = type;
-        this.directionFeatures = features;
-        this.directionPros = pros;
-        this.directionCons = cons;
+    /**
+     * 방위각 정규화 (0~360도 사이로 보정)
+     */
+    private Double normalizeDirection(Double d) {
+        return (d % 360 + 360) % 360;
     }
 }
