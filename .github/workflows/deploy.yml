@@ -1,0 +1,67 @@
+name: Ziply Full CI/CD
+
+on:
+  push:
+    branches: [ "dev", "main" ]
+
+jobs:
+  build-test-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      # Gradle 캐시로 빌드 속도 UP
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x ./gradlew
+
+      # 1. 테스트 실행
+      - name: Run tests
+        run: ./gradlew clean test --no-daemon
+
+      # 2. 전 서비스 빌드
+      - name: Build All Services
+        run: ./gradlew build -x test
+
+      # 3. Docker Hub 로그인 (아까 설정한 시크릿 사용)
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # 4. 이미지 빌드 및 푸시 (분석 서비스 예시)
+      - name: Build and Push Analysis Service
+        run: |
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/analysis-service:latest ./analysis
+          docker push ${{ secrets.DOCKER_USERNAME }}/analysis-service:latest
+
+      # 5. Azure VM 배포 (SSH 접속)
+      - name: Deploy to Azure VM
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }} # 등록한 이름 확인!
+          key: ${{ secrets.VM_SSH_KEY }}
+          script: |
+            cd ~/ziply
+            # 도커 허브에서 이미지 땡겨오기
+            docker pull ${{ secrets.DOCKER_USERNAME }}/analysis-service:latest
+            # 서비스 재시작
+            docker-compose up -d analysis-service
+            docker image prune -f
