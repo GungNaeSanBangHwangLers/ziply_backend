@@ -45,7 +45,8 @@ public class SearchCardService {
 
     @Transactional
     public UUID createSearchCard(Long userId, SearchCardCreateRequest request) {
-        var houseRequests = request.getHouses() != null ? request.getHouses() : new ArrayList<SearchCardCreateRequest.HouseCreateRequest>();
+        var houseRequests = request.getHouses() != null ? request.getHouses()
+                : new ArrayList<SearchCardCreateRequest.HouseCreateRequest>();
 
         List<House> pendingHouses = houseRequests.stream()
                 .map(hReq -> {
@@ -230,8 +231,8 @@ public class SearchCardService {
 
                     // 일자 내 정렬: 미완료 상단 -> 시간순 상단
                     List<HouseResponse> sortedHouses = houseList.stream()
-                            .sorted(Comparator.comparing(this::isCompleted) // false(미완료)가 0이라 먼저 옴
-                                    .thenComparing(House::getVisitDateTime, Comparator.nullsLast(Comparator.naturalOrder())))
+                            .sorted(Comparator.comparing(this::isCompleted)
+                                    .thenComparing(House::getVisitDateTime))
                             .map(HouseResponse::from)
                             .toList();
 
