@@ -4,7 +4,9 @@ import jakarta.persistence.EntityNotFoundException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -14,11 +16,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ziply.review.domain.BasePoint;
 import ziply.review.domain.House;
+import ziply.review.domain.HouseStatus;
 import ziply.review.domain.SearchCard;
 import ziply.review.dto.request.SearchCardCreateRequest;
 import ziply.review.dto.response.BasePointAddressResponse;
 import ziply.review.dto.response.GeocodingResultResponse;
+import ziply.review.dto.response.HouseResponse;
 import ziply.review.dto.response.MapInfoResponse;
+import ziply.review.dto.response.SearchCardDetailResponse;
 import ziply.review.dto.response.SearchCardResponse;
 import ziply.review.event.HouseCreatedEvent;
 import ziply.review.event.HouseCreatedEvent.BasePointDetail;
@@ -197,5 +202,50 @@ public class SearchCardService {
         }
 
         return result;
+    }
+
+    @Transactional(readOnly = true)
+    public List<SearchCardDetailResponse> getSortedCardDetails(UUID searchCardId, Long userId) {
+        // 1. 소유권 검증
+        SearchCard searchCard = searchCardRepository.findById(searchCardId)
+                .orElseThrow(() -> new EntityNotFoundException("해당 카드를 찾을 수 없습니다."));
+
+        if (!searchCard.getUserId().equals(userId)) {
+            throw new RuntimeException("해당 카드에 대한 접근 권한이 없습니다.");
+        }
+
+        // 2. 모든 House 조회
+        List<House> houses = houseRepository.findBySearchCardId(searchCardId);
+
+        // 3. 날짜별 그룹화
+        Map<LocalDate, List<House>> groupedByDate = houses.stream()
+                .filter(h -> h.getVisitDateTime() != null)
+                .collect(Collectors.groupingBy(house -> house.getVisitDateTime().toLocalDate()));
+
+        // 4. 정렬 및 변환
+        return groupedByDate.entrySet().stream()
+                .map(entry -> {
+                    LocalDate date = entry.getKey();
+                    List<House> houseList = entry.getValue();
+
+                    // 일자 내 정렬: 미완료 상단 -> 시간순 상단
+                    List<HouseResponse> sortedHouses = houseList.stream()
+                            .sorted(Comparator.comparing(this::isCompleted) // false(미완료)가 0이라 먼저 옴
+                                    .thenComparing(House::getVisitDateTime, Comparator.nullsLast(Comparator.naturalOrder())))
+                            .map(HouseResponse::from)
+                            .toList();
+
+                    boolean allCompleted = houseList.stream().allMatch(this::isCompleted);
+
+                    return new SearchCardDetailResponse(date, allCompleted, sortedHouses);
+                })
+                // 일자 간 정렬: 전체 미완료 일자 상단 -> 날짜 빠른 순 상단
+                .sorted(Comparator.comparing(SearchCardDetailResponse::isAllCompleted)
+                        .thenComparing(SearchCardDetailResponse::date))
+                .toList();
+    }
+
+    private boolean isCompleted(House house) {
+        return house.getStatus() == HouseStatus.AFTER || !house.getMeasurements().isEmpty();
     }
 }

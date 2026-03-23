@@ -1,7 +1,7 @@
 version: "3.8"
 
 services:
-  # 1. 인프라 레이어 (기존과 동일)
+  # 1. 인프라 레이어
   ziply-mysql:
     image: mysql:8.0
     container_name: ziply-mysql
@@ -34,15 +34,16 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
 
-  # 2. 서비스 레이어 (Azure 경로를 삭제하고 로컬 build 경로로 수정)
+  # 2. 서비스 레이어
   user-service:
-    build: ./user  # [수정] Azure 이미지 대신 로컬 폴더 사용
+    image: ziplyacr0307.azurecr.io/user-service:latest  # build 대신 추가
     container_name: user-service
     restart: always
     depends_on:
       - ziply-mysql
       - kafka
     environment:
+      - SERVER_PORT=8080
       - SPRING_PROFILES_ACTIVE=prod
       - JWT_SECRET=aD93kLmT82vGrPq46WsYtN19BbFzQx7KpV21Rw9TfGh32Nd7HcLm92Qp3XvFt5
       - SPRING_DATASOURCE_URL=jdbc:mysql://ziply-mysql:3306/ziply_user?createDatabaseIfNotExist=true
@@ -51,12 +52,13 @@ services:
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
 
   auth-service:
-    build: ./auth  # [수정]
+    image: ziplyacr0307.azurecr.io/auth-service:latest
     container_name: auth-service
     restart: always
     depends_on:
       - ziply-mysql
     environment:
+      - SERVER_PORT=8080
       - SPRING_PROFILES_ACTIVE=prod
       - JWT_SECRET=aD93kLmT82vGrPq46WsYtN19BbFzQx7KpV21Rw9TfGh32Nd7HcLm92Qp3XvFt5
       - SPRING_DATASOURCE_URL=jdbc:mysql://ziply-mysql:3306/ziply_auth?createDatabaseIfNotExist=true
@@ -64,7 +66,7 @@ services:
       - SPRING_DATASOURCE_PASSWORD=ziply_master_pw
 
   review-service:
-    build: ./review  # [수정]
+    image: ziplyacr0307.azurecr.io/review-service:latest
     container_name: review-service
     restart: always
     ports:
@@ -80,9 +82,11 @@ services:
       - SPRING_DATASOURCE_USERNAME=root
       - SPRING_DATASOURCE_PASSWORD=ziply_master_pw
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_SHOW_SQL=true
 
   analysis-service:
-    build: ./analysis  # [수정]
+    image: ziplyacr0307.azurecr.io/analysis-service:latest
     container_name: analysis-service
     restart: always
     ports:
@@ -92,6 +96,7 @@ services:
       - kafka
       - review-service
     environment:
+      - SERVER_PORT=8080
       - SPRING_PROFILES_ACTIVE=prod
       - JWT_SECRET=aD93kLmT82vGrPq46WsYtN19BbFzQx7KpV21Rw9TfGh32Nd7HcLm92Qp3XvFt5
       - SPRING_DATASOURCE_URL=jdbc:mysql://ziply-mysql:3306/ziply_analysis?createDatabaseIfNotExist=true
@@ -103,12 +108,11 @@ services:
       - KAKAO_API_KEY=e204a5d7b17b627462ffb640491cab65
       - BUS_API_KEY=4e7670676763636837376d73707279
       - SEOUL_TRAFFIC_API_KEY=6852466a4663636839344f714e6f76
-      - BUS_LOCATION_DATA_PATH=/app/resources/seoulBusPosition.json.gz
-      - BUS_LOCATION_DATA_PATH1=/app/resources/seoulBusCount.json
+      - ODSAY_API_KEY=//sPYQzSXFZFOJ5YeJyn1k3o/ZkFYBzUDcSaZGSUzIQ
       - SERVICES_REVIEW_URL=http://review-service:8080
 
   gateway:
-    build: ./gateway  # [수정]
+    image: ziplyacr0307.azurecr.io/gateway:latest
     container_name: gateway
     ports:
       - "8000:8000"
@@ -118,6 +122,7 @@ services:
       - review-service
       - analysis-service
     environment:
+      - SERVER_PORT=8000
       - SPRING_PROFILES_ACTIVE=prod
       - JWT_SECRET=aD93kLmT82vGrPq46WsYtN19BbFzQx7KpV21Rw9TfGh32Nd7HcLm92Qp3XvFt5
 

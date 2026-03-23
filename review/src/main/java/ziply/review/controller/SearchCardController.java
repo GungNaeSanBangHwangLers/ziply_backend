@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 import ziply.review.dto.request.SearchCardCreateRequest;
 import ziply.review.dto.response.BasePointAddressResponse;
 import ziply.review.dto.response.MapInfoResponse;
+import ziply.review.dto.response.SearchCardDetailResponse;
 import ziply.review.dto.response.SearchCardResponse;
 import ziply.review.service.SearchCardService;
 
@@ -72,6 +73,20 @@ public class SearchCardController {
                                                  @RequestBody @Valid SearchCardCreateRequest request) {
         UUID cardId = searchCardService.createSearchCard(userId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(cardId);
+    }
+
+    @Operation(
+            summary = "주거 탐색 카드 상세 조회 (정렬 포함)",
+            description = "날짜별로 그룹화되고, 완료 여부 및 시간에 따라 정렬된 주거 목록을 조회합니다."
+    )
+    @GetMapping("/{searchCardId}/details")
+    public ResponseEntity<List<SearchCardDetailResponse>> getSearchCardDetails(
+            @PathVariable UUID searchCardId,
+            @Parameter(hidden = true) @AuthenticationPrincipal Long userId) {
+
+        List<SearchCardDetailResponse> responses = searchCardService.getSortedCardDetails(searchCardId, userId);
+
+        return ResponseEntity.ok(responses);
     }
 
     @GetMapping("/{searchCardId}/owner-check")
