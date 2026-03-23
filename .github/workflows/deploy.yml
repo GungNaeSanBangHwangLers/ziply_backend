@@ -63,6 +63,7 @@ jobs:
             echo "SEOUL_TRAFFIC_API_KEY=${{ secrets.SEOUL_TRAFFIC_API_KEY }}" >> .env
             echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" >> .env
 
+
             # 2. 최신 이미지 가져오기 및 컨테이너 교체
             docker-compose pull
             docker-compose up -d
