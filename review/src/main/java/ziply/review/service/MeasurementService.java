@@ -203,12 +203,17 @@ public class MeasurementService {
 
     // --- [저장 기능들] ---
 
+    @Transactional
     public void saveDirection(Long userId, Long houseId, DirectionRequest request) {
         House house = getHouseAndValidate(userId, houseId);
         DirectionMapper.DirectionInfo info = directionMapper.getInfo(request.direction());
 
         Measurement measurement = measurementRepository.findByHouseIdAndRound(houseId, request.round())
-                .orElseGet(() -> createEmptyMeasurement(house, request.round()));
+                .orElseGet(() -> {
+                    Measurement newMeasurement = createEmptyMeasurement(house, request.round());
+                    house.getMeasurements().add(newMeasurement);
+                    return newMeasurement;
+                });
 
         measurement.updateDirection(
                 request.direction(),
@@ -220,15 +225,21 @@ public class MeasurementService {
         );
 
         measurementRepository.save(measurement);
+
         house.updateStatus(HouseStatus.AFTER);
     }
 
+    @Transactional // 1. 상태 변경(updateStatus)과 저장을 원자적으로 처리
     public void saveLightLevel(Long userId, Long houseId, LightLevelRequest request) {
         House house = getHouseAndValidate(userId, houseId);
         Double representativeLux = calculateRepresentativeLux(request.lightLevels());
 
         Measurement measurement = measurementRepository.findByHouseIdAndRound(houseId, request.round())
-                .orElseGet(() -> createEmptyMeasurement(house, request.round()));
+                .orElseGet(() -> {
+                    Measurement newMeasurement = createEmptyMeasurement(house, request.round());
+                    house.getMeasurements().add(newMeasurement);
+                    return newMeasurement;
+                });
 
         measurement.updateLightLevel(representativeLux);
 

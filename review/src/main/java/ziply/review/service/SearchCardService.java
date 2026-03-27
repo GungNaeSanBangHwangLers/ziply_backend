@@ -247,6 +247,6 @@ public class SearchCardService {
     }
 
     private boolean isCompleted(House house) {
-        return house.getStatus() == HouseStatus.AFTER || !house.getMeasurements().isEmpty();
+        return HouseStatus.AFTER.equals(house.getStatus());
     }
 }
