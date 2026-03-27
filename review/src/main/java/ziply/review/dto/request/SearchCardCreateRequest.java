@@ -1,13 +1,14 @@
 package ziply.review.dto.request;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+import java.time.LocalDateTime;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.LocalDate;
 import java.util.List;
 
 @Getter
@@ -15,31 +16,18 @@ import java.util.List;
 @NoArgsConstructor
 public class SearchCardCreateRequest {
 
-    @NotBlank(message = "제목은 필수입니다.")
-    private String title;
-
-    @NotNull(message = "시작일은 필수입니다.")
-    private LocalDate startDate;
-
-    private LocalDate endDate;
+    private String basePointAddress;
 
     @Valid
-    private List<BasePointRequest> basePoints;
+    @Size(max = 7)
+    private List<HouseCreateRequest> houses;
 
-    @Getter
-    @Setter
-    @NoArgsConstructor
-    public static class BasePointRequest {
-        @NotBlank(message = "기점 별칭은 필수입니다.")
-        private String alias;
-
-        @NotBlank(message = "주소는 필수입니다.")
+    @Getter @Setter @NoArgsConstructor
+    public static class HouseCreateRequest {
+        @NotBlank
         private String address;
 
-        @NotNull(message = "위도는 필수입니다.")
-        private Double latitude;
-
-        @NotNull(message = "경도는 필수입니다.")
-        private Double longitude;
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm")
+        private LocalDateTime visitDateTime;
     }
 }

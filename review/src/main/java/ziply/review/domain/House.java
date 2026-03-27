@@ -1,14 +1,22 @@
 package ziply.review.domain;
 
 import jakarta.persistence.*;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Setter;
 
 @Entity
 @Getter
+@Setter
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 @Table(name = "houses")
 public class House {
 
@@ -22,16 +30,59 @@ public class House {
 
     private String address;
 
-    private LocalDateTime visitDateTime;
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private HouseStatus status = HouseStatus.BEFORE;
 
-    @Builder
-    public House(SearchCard searchCard, String address, LocalDateTime visitDateTime) {
-        this.searchCard = searchCard;
-        this.address = address;
-        this.visitDateTime = visitDateTime;
+    private LocalDateTime visitDateTime;
+    private Double latitude;
+    private Double longitude;
+
+    // 측정 데이터 연관관계
+    @OneToMany(mappedBy = "house", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<Measurement> measurements = new ArrayList<>();
+
+    // 이미지 데이터 연관관계
+    @OneToMany(mappedBy = "house", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<HouseImage> houseImages = new ArrayList<>();
+
+    // 상태 업데이트 메서드
+    public void updateStatus(HouseStatus status) {
+        this.status = status;
     }
 
-    public void assignSearchCard(SearchCard searchCard) {
-        this.searchCard = searchCard;
+    // 정보 수정 메서드
+    public void update(String address, LocalDateTime visitDateTime) {
+        if (address != null && !address.trim().isEmpty()) {
+            this.address = address;
+        }
+        if (visitDateTime != null) {
+            this.visitDateTime = visitDateTime;
+        }
+    }
+
+    // 방문 일정에 따른 상태 동기화 로직
+    public void syncStatus(LocalDate today) {
+        if (this.status == HouseStatus.AFTER) {
+            return;
+        }
+
+        if (this.visitDateTime == null) {
+            this.status = HouseStatus.BEFORE;
+            return;
+        }
+
+        HouseStatus calculatedStatus;
+        LocalDate visitDate = this.visitDateTime.toLocalDate();
+
+        if (today.isBefore(visitDate)) {
+            calculatedStatus = HouseStatus.BEFORE;
+        } else {
+            calculatedStatus = HouseStatus.IN_PROGRESS;
+        }
+
+        this.status = calculatedStatus;
     }
 }

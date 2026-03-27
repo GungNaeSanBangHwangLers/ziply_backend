@@ -42,17 +42,36 @@ public class SearchCard {
     @CreatedDate
     private LocalDateTime createdAt;
 
+    @OneToMany(mappedBy = "searchCard")
+    private List<House> houses = new ArrayList<>();
+
     public SearchCard(Long userId, String title, LocalDate startDate, LocalDate endDate) {
         this.userId = userId;
         this.title = title;
         this.startDate = startDate;
+        this.endDate = endDate;
         this.createdAt = LocalDateTime.now();
         this.status = SearchCardStatus.PLANNED;
-        this.endDate = endDate;
     }
 
     public void addBasePoint(BasePoint basePoint) {
         this.basePoints.add(basePoint);
         basePoint.assignSearchCard(this);
+    }
+
+    public void syncStatus(LocalDate today) {
+        if (this.startDate == null || this.endDate == null) return;
+
+        SearchCardStatus calculatedStatus;
+
+        if (today.isBefore(this.startDate)) {
+            calculatedStatus = SearchCardStatus.PLANNED;
+        } else if (today.isAfter(this.endDate)) {
+            calculatedStatus = SearchCardStatus.COMPLETED;
+        } else {
+            calculatedStatus = SearchCardStatus.IN_PROGRESS;
+        }
+
+        this.status = calculatedStatus;
     }
 }

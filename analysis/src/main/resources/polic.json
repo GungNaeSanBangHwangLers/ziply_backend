@@ -1,0 +1,1703 @@
+[
+  {
+    "latitude": 37.5665,
+    "longitude": 126.978,
+    "id": 1,
+    "stationName": "을지",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5666,
+    "longitude": 126.9781,
+    "id": 2,
+    "stationName": "광희",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5667,
+    "longitude": 126.9782,
+    "id": 3,
+    "stationName": "약수",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5668,
+    "longitude": 126.9783,
+    "id": 4,
+    "stationName": "신당",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5669,
+    "longitude": 126.9784,
+    "id": 5,
+    "stationName": "장충",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.567,
+    "longitude": 126.9785,
+    "id": 6,
+    "stationName": "충무",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5671,
+    "longitude": 126.9786,
+    "id": 7,
+    "stationName": "을지로3가",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5672,
+    "longitude": 126.9787,
+    "id": 8,
+    "stationName": "종로2가",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5673,
+    "longitude": 126.9788,
+    "id": 9,
+    "stationName": "관수",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5674,
+    "longitude": 126.9789,
+    "id": 10,
+    "stationName": "세검정",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5675,
+    "longitude": 126.979,
+    "id": 11,
+    "stationName": "평창",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5676,
+    "longitude": 126.9791,
+    "id": 12,
+    "stationName": "삼청",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5677,
+    "longitude": 126.9792,
+    "id": 13,
+    "stationName": "통의",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5678,
+    "longitude": 126.9793,
+    "id": 14,
+    "stationName": "청운",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5679,
+    "longitude": 126.9794,
+    "id": 15,
+    "stationName": "옥인",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.568,
+    "longitude": 126.9795,
+    "id": 16,
+    "stationName": "교남",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5681,
+    "longitude": 126.9796,
+    "id": 17,
+    "stationName": "세종로",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5682,
+    "longitude": 126.9797,
+    "id": 18,
+    "stationName": "신문로",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5683,
+    "longitude": 126.9798,
+    "id": 19,
+    "stationName": "사직",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5684,
+    "longitude": 126.9799,
+    "id": 20,
+    "stationName": "청진",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5685,
+    "longitude": 126.98,
+    "id": 21,
+    "stationName": "태평로",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5686,
+    "longitude": 126.9801,
+    "id": 22,
+    "stationName": "서울역",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5687,
+    "longitude": 126.9802,
+    "id": 23,
+    "stationName": "명동",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5688,
+    "longitude": 126.9803,
+    "id": 24,
+    "stationName": "남대문",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5689,
+    "longitude": 126.9804,
+    "id": 25,
+    "stationName": "중림",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.569,
+    "longitude": 126.9805,
+    "id": 26,
+    "stationName": "회현",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5691,
+    "longitude": 126.9806,
+    "id": 27,
+    "stationName": "서소문",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5692,
+    "longitude": 126.9807,
+    "id": 28,
+    "stationName": "충정로",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5693,
+    "longitude": 126.9808,
+    "id": 29,
+    "stationName": "신촌",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5694,
+    "longitude": 126.9809,
+    "id": 30,
+    "stationName": "홍은",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5695,
+    "longitude": 126.981,
+    "id": 31,
+    "stationName": "연희",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5696,
+    "longitude": 126.9811,
+    "id": 32,
+    "stationName": "남가좌",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5697,
+    "longitude": 126.9812,
+    "id": 33,
+    "stationName": "북가좌",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5698,
+    "longitude": 126.9813,
+    "id": 34,
+    "stationName": "홍제",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5699,
+    "longitude": 126.9814,
+    "id": 35,
+    "stationName": "홍은2",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.57,
+    "longitude": 126.9815,
+    "id": 36,
+    "stationName": "혜화",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5701,
+    "longitude": 126.9816,
+    "id": 37,
+    "stationName": "대학로",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5702,
+    "longitude": 126.9817,
+    "id": 38,
+    "stationName": "명륜",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5703,
+    "longitude": 126.9818,
+    "id": 39,
+    "stationName": "창신",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5704,
+    "longitude": 126.9819,
+    "id": 40,
+    "stationName": "동묘",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5705,
+    "longitude": 126.982,
+    "id": 41,
+    "stationName": "덕산",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5706,
+    "longitude": 126.9821,
+    "id": 42,
+    "stationName": "종로5가",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5707,
+    "longitude": 126.9822,
+    "id": 43,
+    "stationName": "효제",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5708,
+    "longitude": 126.9823,
+    "id": 44,
+    "stationName": "원효",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5709,
+    "longitude": 126.9824,
+    "id": 45,
+    "stationName": "용중",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.571,
+    "longitude": 126.9825,
+    "id": 46,
+    "stationName": "이태원",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5711,
+    "longitude": 126.9826,
+    "id": 47,
+    "stationName": "한남",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5712,
+    "longitude": 126.9827,
+    "id": 48,
+    "stationName": "보광",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5713,
+    "longitude": 126.9828,
+    "id": 49,
+    "stationName": "삼각지",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5714,
+    "longitude": 126.9829,
+    "id": 50,
+    "stationName": "한강로",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5715,
+    "longitude": 126.983,
+    "id": 51,
+    "stationName": "돈암",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5716,
+    "longitude": 126.9831,
+    "id": 52,
+    "stationName": "안암",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5717,
+    "longitude": 126.9832,
+    "id": 53,
+    "stationName": "길음",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5718,
+    "longitude": 126.9833,
+    "id": 54,
+    "stationName": "정릉",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5719,
+    "longitude": 126.9834,
+    "id": 55,
+    "stationName": "정릉2",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.572,
+    "longitude": 126.9835,
+    "id": 56,
+    "stationName": "성북",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5721,
+    "longitude": 126.9836,
+    "id": 57,
+    "stationName": "답십리",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5722,
+    "longitude": 126.9837,
+    "id": 58,
+    "stationName": "용신",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5723,
+    "longitude": 126.9838,
+    "id": 59,
+    "stationName": "청량리",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5724,
+    "longitude": 126.9839,
+    "id": 60,
+    "stationName": "제기",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5725,
+    "longitude": 126.984,
+    "id": 61,
+    "stationName": "전농1",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5726,
+    "longitude": 126.9841,
+    "id": 62,
+    "stationName": "전농2",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5727,
+    "longitude": 126.9842,
+    "id": 63,
+    "stationName": "장안1",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5728,
+    "longitude": 126.9843,
+    "id": 64,
+    "stationName": "장안2",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5729,
+    "longitude": 126.9844,
+    "id": 65,
+    "stationName": "이문",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.573,
+    "longitude": 126.9845,
+    "id": 66,
+    "stationName": "휘경",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5731,
+    "longitude": 126.9846,
+    "id": 67,
+    "stationName": "회기",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5732,
+    "longitude": 126.9847,
+    "id": 68,
+    "stationName": "서강",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5733,
+    "longitude": 126.9848,
+    "id": 69,
+    "stationName": "공덕",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5734,
+    "longitude": 126.9849,
+    "id": 70,
+    "stationName": "월드컵",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5735,
+    "longitude": 126.985,
+    "id": 71,
+    "stationName": "홍익",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5736,
+    "longitude": 126.9851,
+    "id": 72,
+    "stationName": "용강",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5737,
+    "longitude": 126.9852,
+    "id": 73,
+    "stationName": "상암",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5738,
+    "longitude": 126.9853,
+    "id": 74,
+    "stationName": "망원",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5739,
+    "longitude": 126.9854,
+    "id": 75,
+    "stationName": "연남",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.574,
+    "longitude": 126.9855,
+    "id": 76,
+    "stationName": "중앙",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5741,
+    "longitude": 126.9856,
+    "id": 77,
+    "stationName": "여의도",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5742,
+    "longitude": 126.9857,
+    "id": 78,
+    "stationName": "문래",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5743,
+    "longitude": 126.9858,
+    "id": 79,
+    "stationName": "신풍",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5744,
+    "longitude": 126.9859,
+    "id": 80,
+    "stationName": "신길",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5745,
+    "longitude": 126.986,
+    "id": 81,
+    "stationName": "양평",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5746,
+    "longitude": 126.9861,
+    "id": 82,
+    "stationName": "당산",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5747,
+    "longitude": 126.9862,
+    "id": 83,
+    "stationName": "대림",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5748,
+    "longitude": 126.9863,
+    "id": 84,
+    "stationName": "대림3",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5749,
+    "longitude": 126.9864,
+    "id": 85,
+    "stationName": "영등포역",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.575,
+    "longitude": 126.9865,
+    "id": 86,
+    "stationName": "한양",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5751,
+    "longitude": 126.9866,
+    "id": 87,
+    "stationName": "성수",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5752,
+    "longitude": 126.9867,
+    "id": 88,
+    "stationName": "서울숲",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5753,
+    "longitude": 126.9868,
+    "id": 89,
+    "stationName": "왕십리",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5754,
+    "longitude": 126.9869,
+    "id": 90,
+    "stationName": "행당",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5755,
+    "longitude": 126.987,
+    "id": 91,
+    "stationName": "옥수",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5756,
+    "longitude": 126.9871,
+    "id": 92,
+    "stationName": "금호",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5757,
+    "longitude": 126.9872,
+    "id": 93,
+    "stationName": "응봉",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5758,
+    "longitude": 126.9873,
+    "id": 94,
+    "stationName": "용답",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5759,
+    "longitude": 126.9874,
+    "id": 95,
+    "stationName": "사당",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.576,
+    "longitude": 126.9875,
+    "id": 96,
+    "stationName": "노량진",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5761,
+    "longitude": 126.9876,
+    "id": 97,
+    "stationName": "상도",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5762,
+    "longitude": 126.9877,
+    "id": 98,
+    "stationName": "남성",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5763,
+    "longitude": 126.9878,
+    "id": 99,
+    "stationName": "흑석",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5764,
+    "longitude": 126.9879,
+    "id": 100,
+    "stationName": "신대방",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5765,
+    "longitude": 126.988,
+    "id": 101,
+    "stationName": "대방",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5766,
+    "longitude": 126.9881,
+    "id": 102,
+    "stationName": "광나루",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5767,
+    "longitude": 126.9882,
+    "id": 103,
+    "stationName": "화양",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5768,
+    "longitude": 126.9883,
+    "id": 104,
+    "stationName": "중곡1",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5769,
+    "longitude": 126.9884,
+    "id": 105,
+    "stationName": "중곡2",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.577,
+    "longitude": 126.9885,
+    "id": 106,
+    "stationName": "중곡3",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5771,
+    "longitude": 126.9886,
+    "id": 107,
+    "stationName": "중곡4",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5772,
+    "longitude": 126.9887,
+    "id": 108,
+    "stationName": "자양",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5773,
+    "longitude": 126.9888,
+    "id": 109,
+    "stationName": "자양1",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5774,
+    "longitude": 126.9889,
+    "id": 110,
+    "stationName": "자양4",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5775,
+    "longitude": 126.989,
+    "id": 111,
+    "stationName": "구의",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5776,
+    "longitude": 126.9891,
+    "id": 112,
+    "stationName": "응암",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5777,
+    "longitude": 126.9892,
+    "id": 113,
+    "stationName": "신사",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5778,
+    "longitude": 126.9893,
+    "id": 114,
+    "stationName": "녹번",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5779,
+    "longitude": 126.9894,
+    "id": 115,
+    "stationName": "응암3",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.578,
+    "longitude": 126.9895,
+    "id": 116,
+    "stationName": "역촌",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5781,
+    "longitude": 126.9896,
+    "id": 117,
+    "stationName": "미아",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5782,
+    "longitude": 126.9897,
+    "id": 118,
+    "stationName": "솔샘",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5783,
+    "longitude": 126.9898,
+    "id": 119,
+    "stationName": "수유1",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5784,
+    "longitude": 126.9899,
+    "id": 120,
+    "stationName": "수유2",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5785,
+    "longitude": 126.99,
+    "id": 121,
+    "stationName": "수유3",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5786,
+    "longitude": 126.9901,
+    "id": 122,
+    "stationName": "인수",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5787,
+    "longitude": 126.9902,
+    "id": 123,
+    "stationName": "번동",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5788,
+    "longitude": 126.9903,
+    "id": 124,
+    "stationName": "번3",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5789,
+    "longitude": 126.9904,
+    "id": 125,
+    "stationName": "삼양",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.579,
+    "longitude": 126.9905,
+    "id": 126,
+    "stationName": "금천",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5791,
+    "longitude": 126.9906,
+    "id": 127,
+    "stationName": "문성",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5792,
+    "longitude": 126.9907,
+    "id": 128,
+    "stationName": "백산",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5793,
+    "longitude": 126.9908,
+    "id": 129,
+    "stationName": "가산",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5794,
+    "longitude": 126.9909,
+    "id": 130,
+    "stationName": "독산",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5795,
+    "longitude": 126.991,
+    "id": 131,
+    "stationName": "망우",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5796,
+    "longitude": 126.9911,
+    "id": 132,
+    "stationName": "중화",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5797,
+    "longitude": 126.9912,
+    "id": 133,
+    "stationName": "용마",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5798,
+    "longitude": 126.9913,
+    "id": 134,
+    "stationName": "봉화",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5799,
+    "longitude": 126.9914,
+    "id": 135,
+    "stationName": "면목본동",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.58,
+    "longitude": 126.9915,
+    "id": 136,
+    "stationName": "면목삼팔",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5801,
+    "longitude": 126.9916,
+    "id": 137,
+    "stationName": "상봉",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5802,
+    "longitude": 126.9917,
+    "id": 138,
+    "stationName": "먹골",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5803,
+    "longitude": 126.9918,
+    "id": 139,
+    "stationName": "역삼",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5804,
+    "longitude": 126.9919,
+    "id": 140,
+    "stationName": "논현1",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5805,
+    "longitude": 126.992,
+    "id": 141,
+    "stationName": "논현2",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5806,
+    "longitude": 126.9921,
+    "id": 142,
+    "stationName": "삼성1",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5807,
+    "longitude": 126.9922,
+    "id": 143,
+    "stationName": "삼성2",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5808,
+    "longitude": 126.9923,
+    "id": 144,
+    "stationName": "청담",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5809,
+    "longitude": 126.9924,
+    "id": 145,
+    "stationName": "신사",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.581,
+    "longitude": 126.9925,
+    "id": 146,
+    "stationName": "압구정",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5811,
+    "longitude": 126.9926,
+    "id": 147,
+    "stationName": "당곡",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5812,
+    "longitude": 126.9927,
+    "id": 148,
+    "stationName": "낙성대",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5813,
+    "longitude": 126.9928,
+    "id": 149,
+    "stationName": "신림",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5814,
+    "longitude": 126.9929,
+    "id": 150,
+    "stationName": "관악산",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5815,
+    "longitude": 126.993,
+    "id": 151,
+    "stationName": "구암",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5816,
+    "longitude": 126.9931,
+    "id": 152,
+    "stationName": "남현",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5817,
+    "longitude": 126.9932,
+    "id": 153,
+    "stationName": "난우",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5818,
+    "longitude": 126.9933,
+    "id": 154,
+    "stationName": "미성",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5819,
+    "longitude": 126.9934,
+    "id": 155,
+    "stationName": "신사",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.582,
+    "longitude": 126.9935,
+    "id": 156,
+    "stationName": "화곡",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5821,
+    "longitude": 126.9936,
+    "id": 157,
+    "stationName": "공항",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5822,
+    "longitude": 126.9937,
+    "id": 158,
+    "stationName": "까치산",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5823,
+    "longitude": 126.9938,
+    "id": 159,
+    "stationName": "가양",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5824,
+    "longitude": 126.9939,
+    "id": 160,
+    "stationName": "곰달래",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5825,
+    "longitude": 126.994,
+    "id": 161,
+    "stationName": "방화3",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5826,
+    "longitude": 126.9941,
+    "id": 162,
+    "stationName": "염창",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5827,
+    "longitude": 126.9942,
+    "id": 163,
+    "stationName": "등촌2",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5828,
+    "longitude": 126.9943,
+    "id": 164,
+    "stationName": "발산",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5829,
+    "longitude": 126.9944,
+    "id": 165,
+    "stationName": "화곡3",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.583,
+    "longitude": 126.9945,
+    "id": 166,
+    "stationName": "마곡",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5831,
+    "longitude": 126.9946,
+    "id": 167,
+    "stationName": "천호",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5832,
+    "longitude": 126.9947,
+    "id": 168,
+    "stationName": "길동",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5833,
+    "longitude": 126.9948,
+    "id": 169,
+    "stationName": "성내",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5834,
+    "longitude": 126.9949,
+    "id": 170,
+    "stationName": "암사",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5835,
+    "longitude": 126.995,
+    "id": 171,
+    "stationName": "둔촌",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5836,
+    "longitude": 126.9951,
+    "id": 172,
+    "stationName": "명일",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5837,
+    "longitude": 126.9952,
+    "id": 173,
+    "stationName": "강일",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5838,
+    "longitude": 126.9953,
+    "id": 174,
+    "stationName": "고덕",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5839,
+    "longitude": 126.9954,
+    "id": 175,
+    "stationName": "상일",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.584,
+    "longitude": 126.9955,
+    "id": 176,
+    "stationName": "석관",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5841,
+    "longitude": 126.9956,
+    "id": 177,
+    "stationName": "장위",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5842,
+    "longitude": 126.9957,
+    "id": 178,
+    "stationName": "월곡",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5843,
+    "longitude": 126.9958,
+    "id": 179,
+    "stationName": "종암",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5844,
+    "longitude": 126.9959,
+    "id": 180,
+    "stationName": "신구로",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5845,
+    "longitude": 126.996,
+    "id": 181,
+    "stationName": "오류",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5846,
+    "longitude": 126.9961,
+    "id": 182,
+    "stationName": "구일",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5847,
+    "longitude": 126.9962,
+    "id": 183,
+    "stationName": "고척",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5848,
+    "longitude": 126.9963,
+    "id": 184,
+    "stationName": "개봉",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5849,
+    "longitude": 126.9964,
+    "id": 185,
+    "stationName": "구로3",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.585,
+    "longitude": 126.9965,
+    "id": 186,
+    "stationName": "가리봉",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5851,
+    "longitude": 126.9966,
+    "id": 187,
+    "stationName": "천왕",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5852,
+    "longitude": 126.9967,
+    "id": 188,
+    "stationName": "반포",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5853,
+    "longitude": 126.9968,
+    "id": 189,
+    "stationName": "서초2",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5854,
+    "longitude": 126.9969,
+    "id": 190,
+    "stationName": "서초3",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5855,
+    "longitude": 126.997,
+    "id": 191,
+    "stationName": "양재",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5856,
+    "longitude": 126.9971,
+    "id": 192,
+    "stationName": "서초",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5857,
+    "longitude": 126.9972,
+    "id": 193,
+    "stationName": "우면",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5858,
+    "longitude": 126.9973,
+    "id": 194,
+    "stationName": "내곡",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5859,
+    "longitude": 126.9974,
+    "id": 195,
+    "stationName": "목1",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.586,
+    "longitude": 126.9975,
+    "id": 196,
+    "stationName": "목2",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5861,
+    "longitude": 126.9976,
+    "id": 197,
+    "stationName": "신정1",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5862,
+    "longitude": 126.9977,
+    "id": 198,
+    "stationName": "신정2",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5863,
+    "longitude": 126.9978,
+    "id": 199,
+    "stationName": "신월2",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5864,
+    "longitude": 126.9979,
+    "id": 200,
+    "stationName": "신월1",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5865,
+    "longitude": 126.998,
+    "id": 201,
+    "stationName": "신정3",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5866,
+    "longitude": 126.9981,
+    "id": 202,
+    "stationName": "신월5",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5867,
+    "longitude": 126.9982,
+    "id": 203,
+    "stationName": "방이",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5868,
+    "longitude": 126.9983,
+    "id": 204,
+    "stationName": "잠실",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5869,
+    "longitude": 126.9984,
+    "id": 205,
+    "stationName": "삼전",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.587,
+    "longitude": 126.9985,
+    "id": 206,
+    "stationName": "가락",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5871,
+    "longitude": 126.9986,
+    "id": 207,
+    "stationName": "문정",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5872,
+    "longitude": 126.9987,
+    "id": 208,
+    "stationName": "마천",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5873,
+    "longitude": 126.9988,
+    "id": 209,
+    "stationName": "거여",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5874,
+    "longitude": 126.9989,
+    "id": 210,
+    "stationName": "풍납",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5875,
+    "longitude": 126.999,
+    "id": 211,
+    "stationName": "오금",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5876,
+    "longitude": 126.9991,
+    "id": 212,
+    "stationName": "신천",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5877,
+    "longitude": 126.9992,
+    "id": 213,
+    "stationName": "위례",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5878,
+    "longitude": 126.9993,
+    "id": 214,
+    "stationName": "당현",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5879,
+    "longitude": 126.9994,
+    "id": 215,
+    "stationName": "월계",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.588,
+    "longitude": 126.9995,
+    "id": 216,
+    "stationName": "화랑",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5881,
+    "longitude": 126.9996,
+    "id": 217,
+    "stationName": "노원역",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5882,
+    "longitude": 126.9997,
+    "id": 218,
+    "stationName": "불암",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5883,
+    "longitude": 126.9998,
+    "id": 219,
+    "stationName": "마들",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5884,
+    "longitude": 126.9999,
+    "id": 220,
+    "stationName": "당고개",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5885,
+    "longitude": 127.0,
+    "id": 221,
+    "stationName": "상계1",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5886,
+    "longitude": 127.0001,
+    "id": 222,
+    "stationName": "남태령",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5887,
+    "longitude": 127.0002,
+    "id": 223,
+    "stationName": "서래",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5888,
+    "longitude": 127.0003,
+    "id": 224,
+    "stationName": "이수",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5889,
+    "longitude": 127.0004,
+    "id": 225,
+    "stationName": "방배1",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.589,
+    "longitude": 127.0005,
+    "id": 226,
+    "stationName": "불광",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5891,
+    "longitude": 127.0006,
+    "id": 227,
+    "stationName": "연신내",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5892,
+    "longitude": 127.0007,
+    "id": 228,
+    "stationName": "진관",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5893,
+    "longitude": 127.0008,
+    "id": 229,
+    "stationName": "대조",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5894,
+    "longitude": 127.0009,
+    "id": 230,
+    "stationName": "창동",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5895,
+    "longitude": 127.001,
+    "id": 231,
+    "stationName": "신창",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5896,
+    "longitude": 127.0011,
+    "id": 232,
+    "stationName": "방학",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5897,
+    "longitude": 127.0012,
+    "id": 233,
+    "stationName": "신방학",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5898,
+    "longitude": 127.0013,
+    "id": 234,
+    "stationName": "도봉1",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5899,
+    "longitude": 127.0014,
+    "id": 235,
+    "stationName": "도봉2",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.59,
+    "longitude": 127.0015,
+    "id": 236,
+    "stationName": "쌍문",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5901,
+    "longitude": 127.0016,
+    "id": 237,
+    "stationName": "숭미",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5902,
+    "longitude": 127.0017,
+    "id": 238,
+    "stationName": "도곡",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5903,
+    "longitude": 127.0018,
+    "id": 239,
+    "stationName": "대치",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5904,
+    "longitude": 127.0019,
+    "id": 240,
+    "stationName": "수서",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5905,
+    "longitude": 127.002,
+    "id": 241,
+    "stationName": "대왕",
+    "classification": "파출소"
+  },
+  {
+    "latitude": 37.5906,
+    "longitude": 127.0021,
+    "id": 242,
+    "stationName": "일원",
+    "classification": "지구대"
+  },
+  {
+    "latitude": 37.5907,
+    "longitude": 127.0022,
+    "id": 243,
+    "stationName": "개포",
+    "classification": "지구대"
+  }
+]
