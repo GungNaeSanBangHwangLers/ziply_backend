@@ -1,135 +1,134 @@
 # Ziply Backend
 
-마이크로서비스 아키텍처 기반의 주거 탐색 플랫폼 백엔드 시스템입니다.
+Ziply는 주거 탐색 경험을 지원하는 마이크로서비스 백엔드입니다.  
+Google OAuth 기반 인증, 사용자 관리, 탐색 카드/집 정보 관리, 생활 인프라 분석 기능을 제공합니다.
 
-## 프로젝트 구조
+## 프로젝트 개요
 
-```
+- 아키텍처: MSA (Service 별 독립 배포)
+- 언어/런타임: Java 17
+- 프레임워크: Spring Boot 3.3.5
+- 빌드: Gradle
+- DB: MySQL (테스트는 H2)
+- 인증: JWT
+
+## 서비스 구성
+
+| 서비스 | 포트 | 역할 |
+|---|---:|---|
+| `gateway` | 8000 | API 라우팅 및 진입점 |
+| `user` | 8080 | 사용자 정보 관리 |
+| `auth` | 8081 | Google OAuth 검증, JWT 발급 |
+| `review` | 8082 | 탐색 카드/집/측정 정보 관리 |
+| `analysis` | (내부) | 거리/소음/안전도 분석 |
+
+## 디렉터리 구조
+
+```text
 ziply-backend/
-├── auth/      # 인증 서비스 (포트 8081)
-├── user/      # 사용자 서비스 (포트 8080)
-├── review/    # 리뷰/탐색 카드 서비스 (포트 8082)
-└── gateway/   # API Gateway (포트 8000)
+├── gateway/
+├── user/
+├── auth/
+├── review/
+└── analysis/
 ```
-
-## 기술 스택
-
-- **언어**: Java 17
-- **프레임워크**: Spring Boot 3.3.5
-- **빌드 도구**: Gradle
-- **데이터베이스**: MySQL
-- **인증**: JWT (JSON Web Token)
-- **API 문서**: Swagger/OpenAPI
-- **테스트**: JUnit 5, Mockito, AssertJ
 
 ## 아키텍처
 
-### 마이크로서비스 구조
+각 서비스는 기본적으로 아래 계층을 따릅니다.
 
-각 서비스는 독립적으로 배포 가능하며, 다음과 같은 책임을 가집니다:
-
-- **auth**: Google OAuth 인증 및 JWT 토큰 발급
-- **user**: 사용자 정보 관리
-- **review**: 주거 탐색 카드 및 기점 관리
-- **gateway**: API 라우팅 및 요청 분산
-
-### 레이어드 아키텍처
-
-각 서비스는 다음 레이어로 구성됩니다:
-
-```
-Controller → Service → Repository → Domain
+```text
+Controller -> Service -> Repository -> Domain
 ```
 
-## 실행 방법
+## 빠른 시작
 
-### 사전 요구사항
+### 1) 사전 준비
 
-- Java 17 이상
-- MySQL 8.0 이상
-- Gradle 7.x 이상
+- Java 17+
+- MySQL 8+
+- Gradle Wrapper (`./gradlew`)
 
-### 데이터베이스 설정
+### 2) DB 생성
 
-각 서비스별로 독립적인 데이터베이스를 사용합니다:
+서비스별 DB를 생성합니다.
 
 - `ziply_auth`
 - `ziply_user`
 - `ziply_review`
+- `ziply_analysis` (사용 시)
 
-### 실행 순서
+### 3) 환경 설정
 
-1. MySQL 데이터베이스 생성 및 설정
-2. 각 서비스의 `application.yml`에서 데이터베이스 연결 정보 수정
-3. 서비스 실행:
+각 모듈의 `src/main/resources/application.yml`에서 아래 값을 환경에 맞게 수정합니다.
+
+- DB 접속 정보
+- JWT 시크릿
+- 외부 API 키 (Google/Kakao/ODsay 등)
+- 서비스 간 호출 URL
+
+### 4) 서비스 실행
 
 ```bash
-# User 서비스
-cd user
-./gradlew bootRun
+# gateway
+cd gateway && ./gradlew bootRun
 
-# Auth 서비스
-cd auth
-./gradlew bootRun
+# user
+cd user && ./gradlew bootRun
 
-# Review 서비스
-cd review
-./gradlew bootRun
+# auth
+cd auth && ./gradlew bootRun
 
-# Gateway
-cd gateway
-./gradlew bootRun
+# review
+cd review && ./gradlew bootRun
+
+# analysis
+cd analysis && ./gradlew bootRun
 ```
 
-## API 엔드포인트
+## 주요 API 예시
 
-### Auth Service (8081)
+### Auth (`auth`)
 
-- `POST /api/v1/auth/google` - Google OAuth 로그인
+- `POST /api/v1/auth/google` : Google 로그인 후 JWT 발급
 
-### User Service (8080)
+### User (`user`)
 
-- `POST /api/v1/users` - 사용자 생성 (AUTH 내부 호출용)
-- `GET /api/v1/users/me` - 내 정보 조회 (JWT 필요)
-- `GET /api/v1/users/name` - 사용자 이름 조회 (JWT 필요)
-- `PATCH /api/v1/users/me` - 사용자 정보 수정 (JWT 필요)
+- `POST /api/v1/users` : 사용자 생성 (내부 호출)
+- `GET /api/v1/users/me` : 내 정보 조회
+- `GET /api/v1/users/name` : 사용자 이름 조회
+- `PATCH /api/v1/users/me` : 사용자 정보 수정
 
-### Review Service (8082)
+### Review (`review`)
 
-- `POST /api/v1/review/card` - 탐색 카드 생성 (JWT 필요)
+- `POST /api/v1/review/card` : 탐색 카드 생성
 
-### Gateway (8000)
-
-모든 요청은 Gateway를 통해 라우팅됩니다.
+> 실제 외부 호출은 `gateway`를 통해 라우팅하는 것을 권장합니다.
 
 ## 인증 플로우
 
-1. 클라이언트가 Google Sign-In SDK로 로그인
-2. 획득한 ID 토큰을 Auth 서비스에 전달
-3. Auth 서비스가 Google 토큰 검증
-4. User 서비스에 사용자 정보 동기화 요청
-5. JWT Access Token 및 Refresh Token 발급
-6. 이후 요청에 JWT 토큰을 Bearer 토큰으로 포함
+1. 클라이언트가 Google Sign-In으로 ID 토큰 획득
+2. ID 토큰을 `auth` 서비스로 전달
+3. `auth`에서 토큰 검증 후 `user` 동기화
+4. Access/Refresh JWT 발급
+5. 이후 API 요청 시 `Authorization: Bearer <token>` 사용
 
 ## 테스트
 
-### 단위 테스트 실행
+루트에서 전체 테스트:
 
 ```bash
-./gradlew test
+./gradlew :auth:test :user:test :review:test :gateway:test :analysis:test
 ```
 
-### 통합 테스트 실행
-
-통합 테스트는 H2 인메모리 데이터베이스를 사용합니다:
+모듈 단위 테스트:
 
 ```bash
-./gradlew test
+./gradlew :user:test
+./gradlew :review:test
 ```
 
-### 테스트 커버리지
-
-JaCoCo를 사용하여 테스트 커버리지를 측정합니다:
+테스트 커버리지 리포트:
 
 ```bash
 ./gradlew jacocoTestReport
@@ -137,40 +136,23 @@ JaCoCo를 사용하여 테스트 커버리지를 측정합니다:
 
 ## 개발 가이드
 
-### 코드 스타일
-
 - Java 코딩 컨벤션 준수
-- Lombok 사용으로 보일러플레이트 코드 최소화
-- DTO는 Record 또는 클래스 사용
-
-### 예외 처리
-
-- 각 모듈별 `GlobalExceptionHandler`를 통한 일관된 에러 응답
-- 커스텀 예외 클래스 사용 (`UserException`, `ReviewException`, `AuthException`)
-
-### 로깅
-
-- SLF4J + Logback 사용
-- 로그 레벨: DEBUG, INFO, WARN, ERROR
-- 로그 형식: `[SERVICE_NAME] 메시지`
+- Lombok으로 보일러플레이트 최소화
+- 모듈별 `GlobalExceptionHandler` 기반 일관된 예외 응답
+- 로그 포맷: `[SERVICE_NAME] ...`
 
 ## 배포
 
-### 환경 변수
-
-중요한 설정값은 환경 변수로 관리합니다:
-
-- `JWT_SECRET`: JWT 서명 키
-- `GOOGLE_CLIENT_ID`: Google OAuth 클라이언트 ID
-- 데이터베이스 연결 정보
-
-### Docker
-
-각 서비스는 독립적으로 Docker 이미지로 빌드 가능합니다.
+- 각 서비스는 독립적으로 Docker 이미지화 가능
+- 민감 정보는 환경 변수/시크릿으로 관리
+  - `JWT_SECRET`
+  - `GOOGLE_CLIENT_ID`
+  - DB 접속 정보
+  - 외부 API 키
 
 ## 라이선스
 
-이 프로젝트는 내부 사용을 위한 것입니다.
+내부 사용 목적 프로젝트입니다.
 
 
 
