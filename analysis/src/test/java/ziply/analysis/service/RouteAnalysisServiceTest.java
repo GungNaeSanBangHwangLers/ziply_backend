@@ -12,6 +12,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,6 +26,8 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 import ziply.analysis.domain.HouseAnalysis;
 import ziply.analysis.dto.response.BasePointAnalysisDto;
+import ziply.analysis.dto.response.LifeScoreAnalysisResponse;
+import ziply.analysis.dto.response.SafetyAnalysisResponse;
 import ziply.analysis.event.HouseUpdatedEvent;
 import ziply.analysis.repository.HouseInfrastructureRepository;
 import ziply.analysis.repository.HouseRouteAnalysisRepository;
@@ -141,6 +144,70 @@ class RouteAnalysisServiceTest {
         verify(houseInfrastructureRepository).deleteByHouseId(100L);
         verify(kakaoInfrastructureService, never()).analyzeInfrastructure(anyLong(), anyDouble(), anyDouble());
         verify(routeAnalysisRepository, never()).save(any(HouseAnalysis.class));
+    }
+
+    @Test
+    void getLifeScoreAnalysisReturnsEmptyWhenNoData() {
+        UUID searchCardId = UUID.randomUUID();
+        mockOwnerCheck(true);
+        when(routeAnalysisRepository.findBySearchCardId(searchCardId)).thenReturn(List.of());
+
+        List<LifeScoreAnalysisResponse> result = routeAnalysisService.getLifeScoreAnalysis(searchCardId, 1L);
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void getLifeScoreAnalysisUsesFallbackMessageWhenInfraMissing() {
+        UUID searchCardId = UUID.randomUUID();
+        mockOwnerCheck(true);
+
+        HouseAnalysis house = HouseAnalysis.builder()
+                .searchCardId(searchCardId)
+                .houseId(10L)
+                .basePointId(1L)
+                .dayScore(65)
+                .nightScore(70)
+                .build();
+        when(routeAnalysisRepository.findBySearchCardId(searchCardId)).thenReturn(List.of(house));
+        when(houseInfrastructureRepository.findByHouseId(10L)).thenReturn(Optional.empty());
+
+        List<LifeScoreAnalysisResponse> result = routeAnalysisService.getLifeScoreAnalysis(searchCardId, 1L);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getMessage()).contains("인프라 분석 정보를 생성 중입니다");
+    }
+
+    @Test
+    void getSafetyAnalysisReturnsSortedByHouseId() {
+        UUID searchCardId = UUID.randomUUID();
+        mockOwnerCheck(true);
+
+        HouseAnalysis highId = HouseAnalysis.builder()
+                .searchCardId(searchCardId)
+                .houseId(20L)
+                .basePointId(1L)
+                .safetyScore(80)
+                .policeCount(1)
+                .streetlightCount(10)
+                .cctvCount(3)
+                .build();
+        HouseAnalysis lowId = HouseAnalysis.builder()
+                .searchCardId(searchCardId)
+                .houseId(10L)
+                .basePointId(1L)
+                .safetyScore(70)
+                .policeCount(0)
+                .streetlightCount(8)
+                .cctvCount(2)
+                .build();
+        when(routeAnalysisRepository.findBySearchCardId(searchCardId)).thenReturn(List.of(highId, lowId));
+
+        List<SafetyAnalysisResponse> result = routeAnalysisService.getSafetyAnalysis(searchCardId, 1L);
+
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).getHouseId()).isEqualTo(10L);
+        assertThat(result.get(1).getHouseId()).isEqualTo(20L);
     }
 
     private void mockOwnerCheck(boolean isOwner) {
