@@ -10,12 +10,14 @@ import static org.mockito.Mockito.when;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+import ziply.review.domain.BasePoint;
 import ziply.review.domain.House;
 import ziply.review.domain.SearchCard;
 import ziply.review.dto.request.HouseUpdateRequest;
@@ -28,18 +30,27 @@ class HouseServiceUpdateTest {
 
     @Mock private HouseRepository houseRepository;
     @Mock private SearchCardRepository searchCardRepository;
-    @Mock private ReviewProducerService producerService;
-    @Mock private GeocodingService geocodingService;
     @Mock private ReviewProducerService reviewProducerService;
+    @Mock private GeocodingService geocodingService;
 
     @InjectMocks
     private HouseService houseService;
+
+    @BeforeEach
+    void setUp() {
+        // producerService와 reviewProducerService가 같은 Mock을 가리키도록 설정
+        ReflectionTestUtils.setField(houseService, "producerService", reviewProducerService);
+    }
 
     @Test
     void updateHouseDoesNotPublishEventWhenAddressIsUnchanged() {
         UUID cardId = UUID.randomUUID();
         SearchCard card = new SearchCard(1L, "카드", null, null);
         ReflectionTestUtils.setField(card, "id", cardId);
+        
+        BasePoint basePoint = new BasePoint("기점", "서울시 강남구", 37.5, 127.0);
+        card.addBasePoint(basePoint);
+        
         House house = House.builder()
                 .id(10L)
                 .searchCard(card)
@@ -64,6 +75,10 @@ class HouseServiceUpdateTest {
         UUID cardId = UUID.randomUUID();
         SearchCard card = new SearchCard(1L, "카드", null, null);
         ReflectionTestUtils.setField(card, "id", cardId);
+        
+        BasePoint basePoint = new BasePoint("기점", "서울시 강남구", 37.5, 127.0);
+        card.addBasePoint(basePoint);
+        
         House house = House.builder()
                 .id(11L)
                 .searchCard(card)
@@ -90,6 +105,10 @@ class HouseServiceUpdateTest {
         UUID cardId = UUID.randomUUID();
         SearchCard card = new SearchCard(1L, "카드", null, null);
         ReflectionTestUtils.setField(card, "id", cardId);
+        
+        BasePoint basePoint = new BasePoint("기점", "서울시 강남구", 37.5, 127.0);
+        card.addBasePoint(basePoint);
+        
         House house = House.builder()
                 .id(12L)
                 .searchCard(card)
