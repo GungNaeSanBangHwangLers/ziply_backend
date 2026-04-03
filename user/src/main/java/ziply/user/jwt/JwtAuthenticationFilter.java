@@ -4,6 +4,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
@@ -13,14 +14,12 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.Collections;
 
+/**
+ * Gateway에서 JWT 검증 후 전달받은 X-User-Id 헤더를 읽어서 인증 처리
+ */
+@Slf4j
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
-
-    private final JwtTokenProvider jwtTokenProvider;
-
-    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider) {
-        this.jwtTokenProvider = jwtTokenProvider;
-    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -28,32 +27,30 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     FilterChain filterChain)
             throws ServletException, IOException {
 
-        String token = resolveToken(request);
-        if (token != null && jwtTokenProvider.validateToken(token)) {
-            Long userId = jwtTokenProvider.getUserId(token);
-            UsernamePasswordAuthenticationToken authentication =
-                    new UsernamePasswordAuthenticationToken(
-                            userId, // principal = userId
-                            null,
-                            Collections.emptyList()
-                    );
-            authentication.setDetails(
-                    new WebAuthenticationDetailsSource().buildDetails(request)
-            );
+        // Gateway에서 전달한 X-User-Id 헤더 읽기
+        String userIdHeader = request.getHeader("X-User-Id");
+        
+        if (userIdHeader != null) {
+            try {
+                Long userId = Long.parseLong(userIdHeader);
+                
+                UsernamePasswordAuthenticationToken authentication =
+                        new UsernamePasswordAuthenticationToken(
+                                userId, // principal = userId
+                                null,
+                                Collections.emptyList()
+                        );
+                authentication.setDetails(
+                        new WebAuthenticationDetailsSource().buildDetails(request)
+                );
 
-            SecurityContextHolder.getContext().setAuthentication(authentication);
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+                log.debug("Authenticated user from Gateway: {}", userId);
+            } catch (NumberFormatException e) {
+                log.warn("Invalid X-User-Id header: {}", userIdHeader);
+            }
         }
 
         filterChain.doFilter(request, response);
-    }
-
-    private String resolveToken(HttpServletRequest request) {
-        String header = request.getHeader("Authorization");
-
-        if (header != null && header.startsWith("Bearer ")) {
-            return header.substring(7);
-        }
-
-        return null;
     }
 }
