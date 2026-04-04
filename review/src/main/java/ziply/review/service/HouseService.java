@@ -1,5 +1,6 @@
 package ziply.review.service;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
@@ -10,7 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ziply.review.domain.House;
-import ziply.review.domain.HouseImage; // 추가됨
+import ziply.review.domain.HouseImage;
 import ziply.review.domain.HouseStatus;
 import ziply.review.domain.SearchCard;
 import ziply.review.dto.request.HouseCreateRequest;
@@ -21,6 +22,7 @@ import ziply.review.dto.response.AddressInfo;
 import ziply.review.event.HouseCreatedEvent;
 import ziply.review.event.HouseCreatedEvent.BasePointDetail;
 import ziply.review.event.HouseUpdatedEvent;
+import ziply.review.exception.GeocodingFailureException;
 import ziply.review.repository.HouseRepository;
 import ziply.review.repository.SearchCardRepository;
 
@@ -51,16 +53,26 @@ public class HouseService {
             throw new IllegalArgumentException("한 카드당 집은 최대 7개까지 등록할 수 있습니다. (현재: " + existingHouseCount + "개)");
         }
 
-        requests.forEach(request -> {
+        // 지오코딩 처리 및 실패 검사 (ALL OR NOTHING)
+        List<GeocodingFailureException.InvalidAddressInfo> invalidAddresses = new ArrayList<>();
+        
+        for (int i = 0; i < requests.size(); i++) {
+            HouseCreateRequest request = requests.get(i);
             try {
                 geocodingService.geocodeAddress(request);
             } catch (RuntimeException e) {
-                log.error("[HOUSE] Geocoding 실패: 주소 {} 처리 중 오류 발생. 해당 집을 건너뜜.", request.getAddress());
+                log.warn("[HOUSE] Geocoding 실패 - 인덱스: {}, 주소: {}, 사유: {}", i, request.getAddress(), e.getMessage());
+                invalidAddresses.add(new GeocodingFailureException.InvalidAddressInfo(i, request.getAddress()));
             }
-        });
+        }
 
+        // 하나라도 실패하면 전체 실패 처리
+        if (!invalidAddresses.isEmpty()) {
+            throw new GeocodingFailureException(invalidAddresses);
+        }
+
+        // 모두 성공한 경우에만 저장
         List<House> houseList = requests.stream()
-                .filter(request -> request.getLatitude() != null && request.getLongitude() != null)
                 .map(request -> House.builder()
                         .searchCard(searchCard)
                         .address(request.getAddress())
@@ -94,6 +106,7 @@ public class HouseService {
 
             producerService.sendHouseCreatedEvent(event);
         });
+        
         return savedHouses.stream().map(House::getId).toList();
     }
 
