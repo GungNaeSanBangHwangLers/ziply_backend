@@ -63,11 +63,12 @@ public class SearchCardController {
     public ResponseEntity<List<SearchCardResponse>> readSearchCard(
             @Parameter(hidden = true) @AuthenticationPrincipal Long userId) {
         List<SearchCardResponse> responseList = searchCardService.getSearchCards(userId);
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(responseList);
+        return ResponseEntity.ok(responseList);
     }
 
-    @Operation(summary = "주거 탐색 카드 생성", description = "새로운 주거 탐색 카드를 생성 및 관련된 기점, 집들의 정보를 함께 저장합니다.")
+    @Operation(summary = "주거 탐색 카드 생성", description = "새로운 주거 탐색 카드를 생성 및 관련된 기점, 집들의 정보를 함께 저장합니다. 집 주소가 유효하지 않으면 전체 실패 처리됩니다.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "카드 생성 성공")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "유효하지 않은 주소 포함")
     @PostMapping
     public ResponseEntity<UUID> createSearchCard(@Parameter(hidden = true) @AuthenticationPrincipal Long userId,
                                                  @RequestBody @Valid SearchCardCreateRequest request) {

@@ -27,6 +27,7 @@ import ziply.review.dto.response.SearchCardDetailResponse;
 import ziply.review.dto.response.SearchCardResponse;
 import ziply.review.event.HouseCreatedEvent;
 import ziply.review.event.HouseCreatedEvent.BasePointDetail;
+import ziply.review.exception.GeocodingFailureException;
 import ziply.review.repository.BasePointRepository;
 import ziply.review.repository.HouseRepository;
 import ziply.review.repository.SearchCardRepository;
@@ -48,22 +49,35 @@ public class SearchCardService {
         var houseRequests = request.getHouses() != null ? request.getHouses()
                 : new ArrayList<SearchCardCreateRequest.HouseCreateRequest>();
 
+        // 1. 집 주소c 지오코딩 실패 검사 (ALL OR NOTHING)
+        List<GeocodingFailureException.InvalidAddressInfo> invalidAddresses = new ArrayList<>();
+        
+        for (int i = 0; i < houseRequests.size(); i++) {
+            SearchCardCreateRequest.HouseCreateRequest hReq = houseRequests.get(i);
+            try {
+                geocodingService.geocodeAddress(hReq.getAddress());
+            } catch (Exception e) {
+                log.warn("[집 생성] 지오코딩 실패 - 인덱스: {}, 주소: {}", i, hReq.getAddress());
+                invalidAddresses.add(new GeocodingFailureException.InvalidAddressInfo(i, hReq.getAddress()));
+            }
+        }
+
+        // 하나라도 실패하면 전체 실패 처리
+        if (!invalidAddresses.isEmpty()) {
+            throw new GeocodingFailureException(invalidAddresses);
+        }
+
+        // 모두 성공한 경우에만 집 생성
         List<House> pendingHouses = houseRequests.stream()
                 .map(hReq -> {
-                    try {
-                        GeocodingResultResponse geo = geocodingService.geocodeAddress(hReq.getAddress());
-                        return House.builder()
-                                .address(hReq.getAddress())
-                                .visitDateTime(hReq.getVisitDateTime())
-                                .latitude(geo.getLatitude())
-                                .longitude(geo.getLongitude())
-                                .build();
-                    } catch (Exception e) {
-                        log.warn("[INTEGRATED] 집 지오코딩 실패: {}", hReq.getAddress());
-                        return null;
-                    }
+                    GeocodingResultResponse geo = geocodingService.geocodeAddress(hReq.getAddress());
+                    return House.builder()
+                            .address(hReq.getAddress())
+                            .visitDateTime(hReq.getVisitDateTime())
+                            .latitude(geo.getLatitude())
+                            .longitude(geo.getLongitude())
+                            .build();
                 })
-                .filter(Objects::nonNull)
                 .toList();
 
         // 2. 탐색 카드 기간(시작일/종료일) 계산
@@ -80,15 +94,15 @@ public class SearchCardService {
             }
         }
 
-        // 3. 탐색 카드 객체 생성 (이전 주소/장단점 파라미터 제거됨)
+        // 3. 탐색 카드 객체 생성
         SearchCard searchCard = new SearchCard(
                 userId,
-                "새로운 탐색 카드",
+                "탐색 카드",
                 calculatedStart,
                 calculatedEnd
         );
 
-        // 4. 기점 정보(BasePoint)가 있을 경우 추가 및 지오코딩
+        // 4. 기점 정보(BasePoint) 추가 및 지오코딩
         if (request.getBasePointAddress() != null && !request.getBasePointAddress().isBlank()) {
             try {
                 GeocodingResultResponse geoResult = geocodingService.geocodeAddress(request.getBasePointAddress());
@@ -99,7 +113,8 @@ public class SearchCardService {
                         geoResult.getLongitude()
                 ));
             } catch (Exception e) {
-                log.error("[INTEGRATED] 기점 지오코딩 실패: {}", request.getBasePointAddress());
+                log.error("[기점] 지오코딩 실패: {}", request.getBasePointAddress());
+                // 기점은 필수가 아니므로 실패해도 계속 진행
             }
         }
 
@@ -111,7 +126,7 @@ public class SearchCardService {
         }
         List<House> savedHouses = houseRepository.saveAll(pendingHouses);
 
-        // 6. 집 생성 이벤트 발행 (Kafka/Message Queue 등)
+        // 6. 집 생성 이벤트 발행
         if (!savedHouses.isEmpty()) {
             sendHouseCreatedEvents(savedCard, savedHouses);
         }

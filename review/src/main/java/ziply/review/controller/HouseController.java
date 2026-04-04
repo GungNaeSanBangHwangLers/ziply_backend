@@ -33,12 +33,14 @@ public class HouseController {
 
     private final HouseService houseService;
 
-    @Operation(summary = "집(매물) 일괄 추가", description = "여러 개의 집 정보를 리스트로 받아 한 번에 저장합니다.")
-    @PostMapping("/{cardId}/houses")
-    public ResponseEntity<List<Long>> createHouses(@PathVariable UUID cardId,
+    @Operation(summary = "집(매물) 일괄 추가", description = "여러 개의 집 정보를 리스트로 받아 한 번에 저장합니다. 주소가 유효하지 않으면 전체 실패 처리됩니다.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "집 생성 성공")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "유효하지 않은 주소 포함")
+    @PostMapping("/{searchCardId}/houses")
+    public ResponseEntity<List<Long>> createHouses(@PathVariable UUID searchCardId,
                                                    @AuthenticationPrincipal Long userId,
                                                    @RequestBody @Valid List<HouseCreateRequest> requests) {
-        List<Long> createdIds = houseService.createHouses(cardId, requests, userId);
+        List<Long> createdIds = houseService.createHouses(searchCardId, requests, userId);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdIds);
     }
 
