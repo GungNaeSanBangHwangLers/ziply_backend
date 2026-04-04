@@ -53,24 +53,16 @@ jobs:
           script: |
             mkdir -p /home/${{ secrets.VM_USER }}/ziply
             cd /home/${{ secrets.VM_USER }}/ziply
-            
-            # .env 파일이 없으면 빈 파일 생성
             touch .env
-            
-            # 함수 정의: 키가 있으면 값을 바꾸고, 없으면 맨 뒤에 추가함
             update_env() {
               local key=$1
               local value=$2
               if grep -q "^${key}=" .env; then
-                # 기존 키가 있으면 수정 (리눅스 sed 호환성 고려)
                 sed -i "s|^${key}=.*|${key}=${value}|" .env
               else
-                # 키가 없으면 파일 끝에 추가
                 echo "${key}=${value}" >> .env
               fi
             }
-
-          # 1. 기존 .env를 보존하며 필요한 값만 업데이트/추가
             update_env "MYSQL_ROOT_PASSWORD" "${{ secrets.MYSQL_ROOT_PASSWORD }}"
             update_env "JWT_SECRET" "${{ secrets.JWT_SECRET }}"
             update_env "KAKAO_API_KEY" "${{ secrets.KAKAO_API_KEY }}"
@@ -79,10 +71,6 @@ jobs:
             update_env "SEOUL_TRAFFIC_API_KEY" "${{ secrets.SEOUL_TRAFFIC_API_KEY }}"
             update_env "DOCKER_USERNAME" "${{ secrets.DOCKER_USERNAME }}"
             update_env "AZURE_STORAGE_CONNECTION_STRING" "${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}"
-            
-            # 2. 최신 이미지 가져오기 및 컨테이너 교체
             docker-compose pull
             docker-compose up -d
-            
-            # 3. 안 쓰는 이미지 삭제
             docker image prune -f
