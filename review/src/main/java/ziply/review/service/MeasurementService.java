@@ -50,6 +50,8 @@ public class MeasurementService {
                             .imageUrl(url)
                             .build())
             );
+            // 이미지 업로드 후 완료 여부 체크 및 상태 업데이트
+            updateHouseCompletionStatus(house);
         }
     }
 
@@ -57,7 +59,7 @@ public class MeasurementService {
      * 특정 회차(Round) 측정 데이터 삭제 및 재정렬
      */
     public void deleteMeasurementByRound(Long userId, Long houseId, Integer round) {
-        getHouseAndValidate(userId, houseId);
+        House house = getHouseAndValidate(userId, houseId);
 
         Measurement measurement = measurementRepository.findByHouseIdAndRound(houseId, round)
                 .orElseThrow(() -> new IllegalArgumentException(round + "차 측정 기록이 없습니다."));
@@ -65,8 +67,11 @@ public class MeasurementService {
         measurementRepository.delete(measurement);
         measurementRepository.reorderRounds(houseId, round);
 
+        // 삭제 후 완료 여부 재확인
         if (measurementRepository.countByHouseId(houseId) == 0) {
-            houseRepository.findById(houseId).ifPresent(h -> h.updateStatus(HouseStatus.BEFORE));
+            house.updateStatus(HouseStatus.BEFORE);
+        } else {
+            updateHouseCompletionStatus(house);
         }
     }
 
@@ -74,10 +79,10 @@ public class MeasurementService {
      * 하우스 모든 측정 데이터 삭제
      */
     public void deleteHouseMeasurement(Long userId, Long houseId) {
-        getHouseAndValidate(userId, houseId);
+        House house = getHouseAndValidate(userId, houseId);
         measurementRepository.deleteAllByHouseId(houseId);
         houseImageRepository.deleteAllByHouseId(houseId);
-        houseRepository.findById(houseId).ifPresent(h -> h.updateStatus(HouseStatus.BEFORE));
+        house.updateStatus(HouseStatus.BEFORE);
     }
 
     // --- [조회 기능들] ---
@@ -226,10 +231,11 @@ public class MeasurementService {
 
         measurementRepository.save(measurement);
 
-        house.updateStatus(HouseStatus.AFTER);
+        // 방향, 채광, 사진이 모두 있는지 체크 후 상태 업데이트
+        updateHouseCompletionStatus(house);
     }
 
-    @Transactional // 1. 상태 변경(updateStatus)과 저장을 원자적으로 처리
+    @Transactional
     public void saveLightLevel(Long userId, Long houseId, LightLevelRequest request) {
         House house = getHouseAndValidate(userId, houseId);
         Double representativeLux = calculateRepresentativeLux(request.lightLevels());
@@ -244,7 +250,9 @@ public class MeasurementService {
         measurement.updateLightLevel(representativeLux);
 
         measurementRepository.save(measurement);
-        house.updateStatus(HouseStatus.AFTER);
+        
+        // 방향, 채광, 사진이 모두 있는지 체크 후 상태 업데이트
+        updateHouseCompletionStatus(house);
     }
 
     // --- [내부 유틸] ---
@@ -253,6 +261,30 @@ public class MeasurementService {
         House house = houseRepository.findById(houseId).orElseThrow(() -> new IllegalArgumentException("하우스 없음"));
         if (!house.getSearchCard().getUserId().equals(userId)) throw new IllegalStateException("권한 없음");
         return house;
+    }
+
+    /**
+     * 집의 완료 상태 체크 및 업데이트
+     * - 방향 데이터 존재 (최소 1개 이상의 Measurement에 direction이 있어야 함)
+     * - 채광 데이터 존재 (최소 1개 이상의 Measurement에 lightLevel이 있어야 함)
+     * - 사진 존재 (최소 1개 이상의 HouseImage가 있어야 함)
+     */
+    private void updateHouseCompletionStatus(House house) {
+        boolean hasDirection = house.getMeasurements().stream()
+                .anyMatch(m -> m.getDirection() != null);
+        
+        boolean hasLightLevel = house.getMeasurements().stream()
+                .anyMatch(m -> m.getLightLevel() != null);
+        
+        boolean hasImages = !house.getHouseImages().isEmpty();
+        
+        // 세 가지 모두 충족하면 AFTER, 아니면 BEFORE 또는 IN_PROGRESS 유지
+        if (hasDirection && hasLightLevel && hasImages) {
+            house.updateStatus(HouseStatus.AFTER);
+        } else if (house.getStatus() == HouseStatus.AFTER) {
+            // 이미 AFTER였는데 조건을 만족하지 않으면 다시 BEFORE로
+            house.updateStatus(HouseStatus.BEFORE);
+        }
     }
 
     private Double calculateRepresentativeLux(List<Double> rawLuxValues) {
