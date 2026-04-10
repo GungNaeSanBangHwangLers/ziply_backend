@@ -15,11 +15,22 @@ public record HouseResponse(
         boolean isMeasurementCompleted
 ) {
     public static HouseResponse from(House house) {
+        // 방향, 채광, 사진이 모두 있는지 체크
+        boolean hasDirection = house.getMeasurements().stream()
+                .anyMatch(m -> m.getDirection() != null);
+        
+        boolean hasLightLevel = house.getMeasurements().stream()
+                .anyMatch(m -> m.getLightLevel() != null);
+        
+        boolean hasImages = !house.getHouseImages().isEmpty();
+        
+        boolean isCompleted = hasDirection && hasLightLevel && hasImages;
+        
         return HouseResponse.builder()
                 .id(house.getId())
                 .visitDateTime(house.getVisitDateTime())
                 .address(house.getAddress())
-                .isMeasurementCompleted(!house.getMeasurements().isEmpty() || house.getStatus() == HouseStatus.AFTER)
+                .isMeasurementCompleted(isCompleted)
                 .build();
     }
 }
