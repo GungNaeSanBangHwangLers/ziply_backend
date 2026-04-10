@@ -261,7 +261,25 @@ public class SearchCardService {
                 .toList();
     }
 
+    /**
+     * 집이 완료 상태인지 확인
+     * - 방향 데이터 존재 (최소 1개 이상의 Measurement에 direction이 있어야 함)
+     * - 채광 데이터 존재 (최소 1개 이상의 Measurement에 lightLevel이 있어야 함)
+     * - 사진 존재 (최소 1개 이상의 HouseImage가 있어야 함)
+     */
     private boolean isCompleted(House house) {
-        return HouseStatus.AFTER.equals(house.getStatus());
+        // 방향 데이터 체크: Measurement 중 direction이 null이 아닌 것이 1개 이상 있어야 함
+        boolean hasDirection = house.getMeasurements().stream()
+                .anyMatch(m -> m.getDirection() != null);
+        
+        // 채광 데이터 체크: Measurement 중 lightLevel이 null이 아닌 것이 1개 이상 있어야 함
+        boolean hasLightLevel = house.getMeasurements().stream()
+                .anyMatch(m -> m.getLightLevel() != null);
+        
+        // 사진 데이터 체크: HouseImage가 1개 이상 있어야 함
+        boolean hasImages = !house.getHouseImages().isEmpty();
+        
+        // 세 가지 모두 충족해야 완료
+        return hasDirection && hasLightLevel && hasImages;
     }
 }
