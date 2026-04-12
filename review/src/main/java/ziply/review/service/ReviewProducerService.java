@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
+import ziply.review.event.DemoDataResetEvent;
 import ziply.review.event.HouseCreatedEvent;
 import ziply.review.event.HouseUpdatedEvent;
 
@@ -17,6 +18,7 @@ public class ReviewProducerService {
     private static final String TOPIC_HOUSE_CREATED = "house-created";
     private static final String TOPIC_HOUSE_UPDATED = "house-location-changed";
     private static final String TOPIC_HOUSE_DELETE = "house-deleted";
+    private static final String TOPIC_DEMO_RESET = "demo-data-reset";
 
     public void sendHouseCreatedEvent(HouseCreatedEvent event) {
         log.info("[Review] HouseCreatedEvent 발송 시작. HouseId: {}", event.getHouseId());
@@ -53,5 +55,18 @@ public class ReviewProducerService {
     public void sendCardDeletedEvent(UUID cardId) {
         kafkaTemplate.send("search-card-deleted", cardId.toString(), cardId.toString());
         log.info("[Review] 탐색카드 삭제 신호 보냄 - CardId: {}", cardId);
+    }
+
+    public void sendDemoDataResetEvent(DemoDataResetEvent event) {
+        log.info("[Review] DemoDataResetEvent 발송 시작. UserId: {}", event.getUserId());
+
+        kafkaTemplate.send(TOPIC_DEMO_RESET, String.valueOf(event.getUserId()), event)
+                .whenComplete((result, ex) -> {
+                    if (ex == null) {
+                        log.info("[Review] 데모 초기화 이벤트 발송 완료 - UserId: {}", event.getUserId());
+                    } else {
+                        log.error("[Review] 데모 초기화 이벤트 발송 실패 - UserId: {}", event.getUserId(), ex);
+                    }
+                });
     }
 }

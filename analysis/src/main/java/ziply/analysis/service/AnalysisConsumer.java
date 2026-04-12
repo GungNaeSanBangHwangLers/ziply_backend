@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import ziply.analysis.event.DemoDataResetEvent;
 import ziply.analysis.event.HouseCreatedEvent;
 import ziply.analysis.event.HouseUpdatedEvent;
 import ziply.analysis.repository.HouseRouteAnalysisRepository;
@@ -19,6 +20,7 @@ public class AnalysisConsumer {
 
     private final HouseRouteAnalysisRepository houseRouteAnalysisRepository;
     private final RouteAnalysisService routeAnalysisService;
+    private final DemoAnalysisService demoAnalysisService;
     private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
     @KafkaListener(topics = "house-created", groupId = "analysis-group")
@@ -73,6 +75,22 @@ public class AnalysisConsumer {
             log.info("[Analyst] 해당 카드의 모든 분석 데이터 삭제 완료 - CardId: {}", searchCardId);
         } catch (Exception e) {
             log.error("[Analyst] 카드 ID 변환 실패: {}", cleanId);
+        }
+    }
+
+    @Transactional
+    @KafkaListener(topics = "demo-data-reset", groupId = "analysis-group")
+    public void handleDemoDataReset(String message) {
+        try {
+            DemoDataResetEvent event = objectMapper.readValue(message, DemoDataResetEvent.class);
+            log.info("[DEMO-Analysis] 데모 초기화 이벤트 수신 - userId: {}, houseIds: {}", 
+                    event.getUserId(), event.getHouseIds());
+            
+            demoAnalysisService.resetDemoAnalysisData(event.getHouseIds());
+            
+            log.info("[DEMO-Analysis] 데모 초기화 처리 완료 - userId: {}", event.getUserId());
+        } catch (Exception e) {
+            log.error("[DEMO-Analysis] 데모 초기화 처리 실패: {}", e.getMessage(), e);
         }
     }
 }
