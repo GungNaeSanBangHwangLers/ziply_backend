@@ -43,6 +43,11 @@ tasks.named('test') {
 	useJUnitPlatform()
 }
 
+// plain JAR 생성 비활성화 (실행 가능한 JAR만 생성)
+jar {
+	enabled = false
+}
+
 // --- Jacoco 설정 ---
 apply plugin: "jacoco"
 

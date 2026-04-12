@@ -23,11 +23,15 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
     // JWT 검증이 필요 없는 경로들
     private static final List<String> EXCLUDED_PATHS = List.of(
-            "/api/v1/auth/google",           // Google 로그인
-            "/api/v1/auth/refresh",          // 토큰 갱신
+            "/api/v1/auth",                  // Auth 서비스 전체 (로그인, 토큰 갱신 등)
             "/swagger-ui",                   // Swagger UI
             "/v3/api-docs",                  // OpenAPI docs
             "/actuator"                      // Spring Actuator
+    );
+
+    // POST 메서드로 호출되면 JWT 검증 제외 (User 생성)
+    private static final List<String> POST_EXCLUDED_PATHS = List.of(
+            "/api/v1/users"                  // User 생성 (POST /api/v1/users)
     );
 
     @Override
@@ -36,7 +40,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         String path = request.getURI().getPath();
 
         // 제외 경로인지 확인
-        if (isExcludedPath(path)) {
+        if (isExcludedPath(path, request.getMethod().toString())) {
             log.debug("[JWT Filter] Excluded path: {}", path);
             return chain.filter(exchange);
         }
@@ -79,8 +83,18 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         return chain.filter(exchange.mutate().request(modifiedRequest).build());
     }
 
-    private boolean isExcludedPath(String path) {
-        return EXCLUDED_PATHS.stream().anyMatch(path::startsWith);
+    private boolean isExcludedPath(String path, String method) {
+        // 메서드에 관계없이 제외되는 경로
+        if (EXCLUDED_PATHS.stream().anyMatch(path::startsWith)) {
+            return true;
+        }
+        
+        // POST 메서드일 때만 제외되는 경로
+        if ("POST".equalsIgnoreCase(method)) {
+            return POST_EXCLUDED_PATHS.stream().anyMatch(path::equals);
+        }
+        
+        return false;
     }
 
     @Override
