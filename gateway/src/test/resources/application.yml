@@ -1,0 +1,39 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: ziply-gateway
+  cloud:
+    gateway:
+      routes:
+        - id: user-service
+          uri: http://localhost:8080
+          predicates:
+            - Path=/api/v1/users/**
+          filters:
+            - StripPrefix=0
+
+        - id: auth-service
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/v1/auth/**
+          filters:
+            - StripPrefix=0
+
+        - id: review-service
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/v1/review/**,/api/v1/demo/**
+          filters:
+            - StripPrefix=0
+
+        - id: analysis-service
+          uri: http://localhost:8083
+          predicates:
+            - Path=/api/v1/analysis/**
+          filters:
+            - StripPrefix=0
+
+jwt:
+  secret: test-jwt-secret-key-for-unit-testing-only-do-not-use-in-production
