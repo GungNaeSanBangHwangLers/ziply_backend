@@ -101,6 +101,11 @@ public class RouteAnalysisService {
                 (distanceKm > 0) ? (int) Math.round((distanceKm / AVG_WALKING_SPEED_KM_H) * MINUTES_IN_HOUR) : 0;
         int bikeTimeMin = (distanceKm > 0) ? (int) Math.round((distanceKm / AVG_BIKE_SPEED_KM_H) * MINUTES_IN_HOUR) : 0;
 
+        // 대중교통 정보가 없으면 도보 추천 (시간 제한 없음)
+        if (transit.timeMin() == 0 && "정보 없음".equals(transit.paymentStr()) && walkTimeMin > 0) {
+            transit = new TransitResult(0, "도보가 더 빨라요", 0);
+        }
+
         HouseAnalysis analysis = HouseAnalysis.builder()
                 .searchCardId(searchCardId).houseId(houseId).basePointId(point.id()).basePointName(point.name())
                 .walkingTimeMin(walkTimeMin).walkingDistanceKm(distanceKm)
@@ -127,38 +132,85 @@ public class RouteAnalysisService {
         Map<Long, List<HouseAnalysis>> grouped = allData.stream()
                 .collect(Collectors.groupingBy(HouseAnalysis::getBasePointId));
 
-        return grouped.entrySet().stream().map(entry -> {
-            List<HouseAnalysis> results = entry.getValue();
-            results.sort(
-                    Comparator.comparing(HouseAnalysis::getWalkingTimeMin, Comparator.nullsLast(Integer::compareTo)));
+        return grouped.entrySet().stream()
+                .map(entry -> createBasePointAnalysis(entry.getValue(), houseLabelMap))
+                .toList();
+    }
 
-            List<String> feeDetails = new ArrayList<>();
-            for (HouseAnalysis entity : results) {
-                String label = houseLabelMap.get(entity.getHouseId());
-                String priceStr = (entity.getTransitPaymentStr() != null) ?
-                        entity.getTransitPaymentStr().replaceAll("[^0-9]", "") : "";
+    private BasePointAnalysisDto createBasePointAnalysis(
+            List<HouseAnalysis> results,
+            Map<Long, String> houseLabelMap) {
+        
+        // 도보 시간 기준 정렬
+        results.sort(Comparator.comparing(HouseAnalysis::getWalkingTimeMin, Comparator.nullsLast(Integer::compareTo)));
 
-                int rawPrice = priceStr.isEmpty() ? 0 : Integer.parseInt(priceStr);
+        // 도보 추천 집과 교통비 집 분류
+        Map<Boolean, List<HouseAnalysis>> partitioned = results.stream()
+                .collect(Collectors.partitioningBy(
+                    e -> "도보가 더 빨라요".equals(e.getTransitPaymentStr())
+                ));
 
-                if (rawPrice > 0) {
-                    feeDetails.add(String.format("%s는 %,d원", label, rawPrice * 2 * 30));
-                } else {
-                    feeDetails.add(String.format("%s는 정보 없음", label));
-                }
-            }
+        List<String> walkingLabels = partitioned.get(true).stream()
+                .map(e -> houseLabelMap.get(e.getHouseId()))
+                .toList();
 
-            // --- [수정] 상수 메시지 적용 및 멘트 구성 ---
-            String bikeMessage = BIKE_RENTAL_INFO;
-            String transportMessage = String.format("한 달(30일) 기준 왕복 교통비는 %s이에요.%s",
-                    String.join(", ", feeDetails),
-                    CLIMATE_CARD_INFO);
+        List<String> feeDetails = partitioned.get(false).stream()
+                .map(e -> formatFeeDetail(e, houseLabelMap.get(e.getHouseId())))
+                .toList();
 
-            List<HouseAnalysisDto> houseDtos = results.stream()
-                    .map(e -> HouseAnalysisDto.from(e, houseLabelMap.get(e.getHouseId())))
-                    .toList();
+        // 메시지 생성
+        String transportMessage = buildTransportMessage(feeDetails, walkingLabels);
+        
+        // 자전거 메시지: 모든 집이 도보 추천이면 불필요
+        String bikeMessage = (feeDetails.isEmpty() && !walkingLabels.isEmpty()) 
+            ? null 
+            : BIKE_RENTAL_INFO;
 
-            return new BasePointAnalysisDto(houseDtos, bikeMessage, transportMessage);
-        }).toList();
+        // DTO 변환
+        List<HouseAnalysisDto> houseDtos = results.stream()
+                .map(e -> HouseAnalysisDto.from(e, houseLabelMap.get(e.getHouseId())))
+                .toList();
+
+        return new BasePointAnalysisDto(houseDtos, bikeMessage, transportMessage);
+    }
+
+    private String formatFeeDetail(HouseAnalysis entity, String label) {
+        int price = extractPrice(entity.getTransitPaymentStr());
+        return price > 0
+                ? String.format("%s는 %,d원", label, price * 2 * 30)
+                : String.format("%s는 정보 없음", label);
+    }
+
+    private int extractPrice(String paymentStr) {
+        if (paymentStr == null) {
+            return 0;
+        }
+        String priceStr = paymentStr.replaceAll("[^0-9]", "");
+        return priceStr.isEmpty() ? 0 : Integer.parseInt(priceStr);
+    }
+
+    private String buildTransportMessage(List<String> feeDetails, List<String> walkingLabels) {
+        StringBuilder sb = new StringBuilder();
+
+        // 교통비 정보
+        if (!feeDetails.isEmpty()) {
+            sb.append("한 달(30일) 기준 왕복 교통비는 ")
+              .append(String.join(", ", feeDetails))
+              .append("이에요. ");
+        }
+
+        // 도보 추천
+        if (!walkingLabels.isEmpty()) {
+            sb.append(String.join(", ", walkingLabels))
+              .append("는 도보로 이동 가능해요. ");
+        }
+
+        // 기후동행카드 안내 (교통비 정보가 있을 때만)
+        if (!feeDetails.isEmpty()) {
+            sb.append(CLIMATE_CARD_INFO);
+        }
+
+        return sb.toString().trim();
     }
 
     @Transactional(readOnly = true)
