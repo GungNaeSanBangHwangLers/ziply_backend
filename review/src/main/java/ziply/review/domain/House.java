@@ -30,6 +30,9 @@ public class House {
 
     private String address;
 
+    @Column(name = "region_name")
+    private String regionName;   // 카카오 API region_3depth_name (법정동, 예: 상도동)
+
     @Enumerated(EnumType.STRING)
     @Builder.Default
     private HouseStatus status = HouseStatus.BEFORE;

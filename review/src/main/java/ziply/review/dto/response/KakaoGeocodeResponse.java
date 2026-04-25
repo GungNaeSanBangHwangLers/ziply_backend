@@ -35,6 +35,8 @@ public class KakaoGeocodeResponse {
     @ToString
     public static class RoadAddress {
         private String address_name;
+        private String region_2depth_name;   // 구 (예: 동작구)
+        private String region_3depth_name;   // 법정동 (예: 상도동)
     }
 
     @Getter
@@ -42,5 +44,7 @@ public class KakaoGeocodeResponse {
     @ToString
     public static class Address {
         private String address_name;
+        private String region_2depth_name;   // 구 (예: 동작구)
+        private String region_3depth_name;   // 법정동 (예: 상도동)
     }
 }

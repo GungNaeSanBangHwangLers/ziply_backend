@@ -51,7 +51,7 @@ public class RouteAnalysisService {
     public void processHouseCreation(HouseCreatedEvent event) {
         List<AnalysisPoint> points = event.getBasePoints().stream()
                 .map(p -> new AnalysisPoint(p.getId(), p.getName(), p.getLatitude(), p.getLongitude())).toList();
-        processAnalysis(event.getSearchCardId(), event.getHouseId(), event.getLatitude(), event.getLongitude(), points);
+        processAnalysis(event.getSearchCardId(), event.getHouseId(), event.getLatitude(), event.getLongitude(), event.getRegionName(), points);
     }
 
     @Transactional
@@ -65,10 +65,10 @@ public class RouteAnalysisService {
 
         List<AnalysisPoint> points = event.getBasePoints().stream()
                 .map(p -> new AnalysisPoint(p.getId(), p.getName(), p.getLatitude(), p.getLongitude())).toList();
-        processAnalysis(event.getSearchCardId(), event.getHouseId(), event.getLatitude(), event.getLongitude(), points);
+        processAnalysis(event.getSearchCardId(), event.getHouseId(), event.getLatitude(), event.getLongitude(), event.getRegionName(), points);
     }
 
-    private void processAnalysis(UUID searchCardId, Long houseId, double lat, double lon, List<AnalysisPoint> points) {
+    private void processAnalysis(UUID searchCardId, Long houseId, double lat, double lon, String regionName, List<AnalysisPoint> points) {
         kakaoInfrastructureService.analyzeInfrastructure(houseId, lat, lon);
         int dayScore = noiseScoringService.calculateDayNoiseScore(houseId, lat, lon);
         int nightScore = noiseScoringService.calculateNightNoiseScore(houseId, lat, lon);
@@ -80,7 +80,7 @@ public class RouteAnalysisService {
                 TransitResult transit = transitProvider.getTransitRoute(lat, lon, point.lat(), point.lon());
                 RouteResult car = kakaoRouteProvider.getCarRoute(lat, lon, point.lat(), point.lon());
 
-                saveCommon(searchCardId, houseId, point, walk, transit, car, dayScore, nightScore, safetyResult);
+                saveCommon(searchCardId, houseId, regionName, point, walk, transit, car, dayScore, nightScore, safetyResult);
             } catch (Exception e) {
                 log.error("Analysis failed in Async: HouseId={}, PointId={}", houseId, point.id(), e);
             }
@@ -89,7 +89,7 @@ public class RouteAnalysisService {
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
     }
 
-    private void saveCommon(UUID searchCardId, Long houseId, AnalysisPoint point, RouteResult walk,
+    private void saveCommon(UUID searchCardId, Long houseId, String regionName, AnalysisPoint point, RouteResult walk,
                             TransitResult transit, RouteResult car, Integer dayScore, Integer nightScore,
                             SafetyAnalysisResult safetyResult) {
 
@@ -115,7 +115,9 @@ public class RouteAnalysisService {
                 .carTimeMin(carTimeMin)
                 .dayScore(dayScore).nightScore(nightScore).safetyScore(safetyResult.getScore())
                 .policeCount(safetyResult.getPoliceCount()).streetlightCount(safetyResult.getStreetlightCount())
-                .cctvCount(safetyResult.getCctvCount()).build();
+                .cctvCount(safetyResult.getCctvCount())
+                .regionName(regionName)
+                .build();
 
         routeAnalysisRepository.save(analysis);
     }

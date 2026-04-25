@@ -19,6 +19,7 @@ public class HouseUpdatedEvent {
     private UUID searchCardId;
 
     private String address;
+    private String regionName;
 
     private Double latitude;
     private Double longitude;

@@ -18,6 +18,7 @@ public class HouseCreatedEvent {
     private Long houseId;
     private Double latitude;
     private Double longitude;
+    private String regionName;
 
     private UUID searchCardId;
 

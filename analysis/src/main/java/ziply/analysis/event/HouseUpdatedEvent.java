@@ -19,6 +19,7 @@ public class HouseUpdatedEvent {
     private UUID searchCardId;
 
     private String address;
+    private String regionName;   // 법정동 이름 (예: 상도동)
 
     private Double latitude;
     private Double longitude;
