@@ -46,4 +46,7 @@ public class HouseAnalysis {
     private Integer policeCount;
     private Integer streetlightCount;
     private Integer cctvCount;
+
+    @Column(name = "region_name")
+    private String regionName;   // 법정동 이름 (예: 상도동) — 치안뉴스 조회에 활용
 }

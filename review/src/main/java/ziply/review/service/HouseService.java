@@ -16,7 +16,6 @@ import ziply.review.domain.HouseStatus;
 import ziply.review.domain.SearchCard;
 import ziply.review.dto.request.HouseCreateRequest;
 import ziply.review.dto.request.HouseUpdateRequest;
-import ziply.review.dto.response.GeocodingResultResponse;
 import ziply.review.dto.response.HouseListResponse;
 import ziply.review.dto.response.AddressInfo;
 import ziply.review.event.HouseCreatedEvent;
@@ -79,6 +78,7 @@ public class HouseService {
                         .visitDateTime(request.getVisitDateTime())
                         .latitude(request.getLatitude())
                         .longitude(request.getLongitude())
+                        .regionName(request.getRegionName())
                         .build())
                 .collect(Collectors.toList());
 
@@ -98,6 +98,7 @@ public class HouseService {
                     .houseId(house.getId())
                     .latitude(house.getLatitude())
                     .longitude(house.getLongitude())
+                    .regionName(house.getRegionName())
                     .timestamp(System.currentTimeMillis())
                     .action("CREATED")
                     .searchCardId(searchCard.getId())
@@ -154,7 +155,13 @@ public class HouseService {
         house.update(newAddress, request.getVisitDateTime());
 
         if (!oldAddress.equals(newAddress)) {
-            GeocodingResultResponse geocodingResult = geocodingService.geocodeAddress(newAddress);
+            HouseCreateRequest tempRequest = new HouseCreateRequest();
+            tempRequest.setAddress(newAddress);
+            geocodingService.geocodeAddress(tempRequest);
+
+            house.setLatitude(tempRequest.getLatitude());
+            house.setLongitude(tempRequest.getLongitude());
+            house.setRegionName(tempRequest.getRegionName());
 
             List<HouseUpdatedEvent.BasePointDetail> basePoints = house.getSearchCard().getBasePoints().stream()
                     .map(bp -> HouseUpdatedEvent.BasePointDetail.builder()
@@ -169,8 +176,9 @@ public class HouseService {
                     .houseId(house.getId())
                     .searchCardId(house.getSearchCard().getId())
                     .address(newAddress)
-                    .latitude(geocodingResult.getLatitude())
-                    .longitude(geocodingResult.getLongitude())
+                    .regionName(tempRequest.getRegionName())
+                    .latitude(tempRequest.getLatitude())
+                    .longitude(tempRequest.getLongitude())
                     .basePoints(basePoints)
                     .timestamp(System.currentTimeMillis())
                     .build();

@@ -18,6 +18,7 @@ public class HouseCreatedEvent {
     private Long houseId;
     private Double latitude;
     private Double longitude;
+    private String regionName;   // 법정동 이름 (예: 상도동)
 
     private UUID searchCardId;
 

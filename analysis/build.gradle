@@ -16,6 +16,8 @@ java {
 
 repositories {
     mavenCentral()
+    maven { url 'https://repo.spring.io/milestone' }
+    maven { url 'https://repo.spring.io/release' }
 }
 
 dependencies {
@@ -37,6 +39,12 @@ dependencies {
 
     implementation 'org.springframework.kafka:spring-kafka'
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
+
+    // Spring AI 1.0.0 GA - OpenAI 임베딩 + Qdrant 벡터 스토어
+    // 1.0.0 GA에서 아티팩트 네이밍 변경: spring-ai-*-spring-boot-starter → spring-ai-starter-*
+    implementation platform('org.springframework.ai:spring-ai-bom:1.0.0')
+    implementation 'org.springframework.ai:spring-ai-starter-model-openai'        // OpenAI 임베딩 자동설정
+    implementation 'org.springframework.ai:spring-ai-starter-vector-store-qdrant' // Qdrant 벡터 스토어 자동설정
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'com.h2database:h2'
 }

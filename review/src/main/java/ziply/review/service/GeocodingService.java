@@ -7,6 +7,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriComponentsBuilder;
 import ziply.review.dto.request.HouseCreateRequest;
 import ziply.review.dto.response.GeocodingResultResponse;
+import ziply.review.dto.response.KakaoCoord2RegionResponse;
 import ziply.review.dto.response.KakaoGeocodeResponse;
 
 @Slf4j
@@ -17,7 +18,8 @@ public class GeocodingService {
     private final String kakaoApiKey;
     private final String kakaoGeocodingUrl;
 
-    public GeocodingService(WebClient.Builder webClientBuilder, @Value("${kakao.api.key}") String kakaoApiKey,
+    public GeocodingService(WebClient.Builder webClientBuilder,
+                            @Value("${kakao.api.key}") String kakaoApiKey,
                             @Value("${kakao.api.geocoding-url}") String kakaoGeocodingUrl) {
 
         int pathIndex = kakaoGeocodingUrl.indexOf("/v2");
@@ -33,15 +35,19 @@ public class GeocodingService {
 
         log.info("Geocoding: Kakao API로 '{}' 주소의 좌표를 조회합니다.", address);
 
-        String uri = UriComponentsBuilder.fromPath("/v2/local/search/address.json").queryParam("query", address).build()
-                .toUriString();
+        String uri = UriComponentsBuilder.fromPath("/v2/local/search/address.json")
+                .queryParam("query", address)
+                .build().toUriString();
 
         try {
-            KakaoGeocodeResponse response = webClient.get().uri(uri).header("Authorization", "KakaoAK " + kakaoApiKey)
-                    .retrieve().onStatus(status -> status.is4xxClientError() || status.is5xxServerError(),
+            KakaoGeocodeResponse response = webClient.get().uri(uri)
+                    .header("Authorization", "KakaoAK " + kakaoApiKey)
+                    .retrieve()
+                    .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(),
                             clientResponse -> clientResponse.bodyToMono(String.class)
                                     .map(body -> new RuntimeException("Kakao API 오류 응답: " + body)))
-                    .bodyToMono(KakaoGeocodeResponse.class).block();
+                    .bodyToMono(KakaoGeocodeResponse.class)
+                    .block();
 
             if (response != null && response.getDocuments() != null && !response.getDocuments().isEmpty()) {
                 KakaoGeocodeResponse.Document doc = response.getDocuments().get(0);
@@ -51,6 +57,7 @@ public class GeocodingService {
 
                 request.setLongitude(longitude);
                 request.setLatitude(latitude);
+                request.setRegionName(fetchDistrictName(latitude, longitude));
 
                 log.info("Geocoding 성공: 주소 '{}', 위도 {}, 경도 {}", address, latitude, longitude);
 
@@ -65,19 +72,59 @@ public class GeocodingService {
         }
     }
 
+    /**
+     * 위도/경도로 Kakao coord2regioncode API를 호출해 법정 구(region_2depth_name)를 반환한다.
+     */
+    public String fetchDistrictName(double latitude, double longitude) {
+        String uri = UriComponentsBuilder.fromPath("/v2/local/geo/coord2regioncode.json")
+                .queryParam("x", longitude)
+                .queryParam("y", latitude)
+                .build().toUriString();
+
+        try {
+            KakaoCoord2RegionResponse response = webClient.get()
+                    .uri(uri)
+                    .header("Authorization", "KakaoAK " + kakaoApiKey)
+                    .retrieve()
+                    .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(),
+                            clientResponse -> clientResponse.bodyToMono(String.class)
+                                    .map(body -> new RuntimeException("Kakao coord2region API 오류: " + body)))
+                    .bodyToMono(KakaoCoord2RegionResponse.class)
+                    .block();
+
+            if (response != null && response.getDocuments() != null) {
+                String district = response.getDocuments().stream()
+                        .filter(doc -> "B".equals(doc.getRegion_type()))
+                        .map(KakaoCoord2RegionResponse.Document::getRegion_2depth_name)
+                        .filter(name -> name != null && !name.isBlank())
+                        .findFirst()
+                        .orElse(null);
+
+                log.info("coord2regioncode 결과: 위도={}, 경도={}, 구={}", latitude, longitude, district);
+                return district;
+            }
+        } catch (Exception e) {
+            log.warn("coord2regioncode API 호출 실패 (lat={}, lon={}): {}", latitude, longitude, e.getMessage());
+        }
+        return null;
+    }
 
     public GeocodingResultResponse geocodeAddress(String address) {
         log.info("Geocoding: Kakao API로 '{}' 주소의 좌표를 조회합니다.", address);
 
-        String uri = UriComponentsBuilder.fromPath("/v2/local/search/address.json").queryParam("query", address).build()
-                .toUriString();
+        String uri = UriComponentsBuilder.fromPath("/v2/local/search/address.json")
+                .queryParam("query", address)
+                .build().toUriString();
 
         try {
-            KakaoGeocodeResponse response = webClient.get().uri(uri).header("Authorization", "KakaoAK " + kakaoApiKey)
-                    .retrieve().onStatus(status -> status.is4xxClientError() || status.is5xxServerError(),
+            KakaoGeocodeResponse response = webClient.get().uri(uri)
+                    .header("Authorization", "KakaoAK " + kakaoApiKey)
+                    .retrieve()
+                    .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(),
                             clientResponse -> clientResponse.bodyToMono(String.class)
                                     .map(body -> new RuntimeException("Kakao API 오류 응답: " + body)))
-                    .bodyToMono(KakaoGeocodeResponse.class).block();
+                    .bodyToMono(KakaoGeocodeResponse.class)
+                    .block();
 
             if (response != null && response.getDocuments() != null && !response.getDocuments().isEmpty()) {
                 KakaoGeocodeResponse.Document doc = response.getDocuments().get(0);

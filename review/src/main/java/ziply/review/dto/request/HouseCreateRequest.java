@@ -13,4 +13,5 @@ public class HouseCreateRequest {
     private LocalDateTime visitDateTime;
     private Double latitude;
     private Double longitude;
+    private String regionName;
 }

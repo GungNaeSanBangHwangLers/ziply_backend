@@ -71,11 +71,13 @@ public class SearchCardService {
         List<House> pendingHouses = houseRequests.stream()
                 .map(hReq -> {
                     GeocodingResultResponse geo = geocodingService.geocodeAddress(hReq.getAddress());
+                    String regionName = geocodingService.fetchDistrictName(geo.getLatitude(), geo.getLongitude());
                     return House.builder()
                             .address(hReq.getAddress())
                             .visitDateTime(hReq.getVisitDateTime())
                             .latitude(geo.getLatitude())
                             .longitude(geo.getLongitude())
+                            .regionName(regionName)
                             .build();
                 })
                 .toList();
@@ -163,6 +165,7 @@ public class SearchCardService {
                     .houseId(house.getId())
                     .latitude(house.getLatitude())
                     .longitude(house.getLongitude())
+                    .regionName(house.getRegionName())
                     .searchCardId(card.getId())
                     .basePoints(basePointDetails)
                     .action("CREATED")
