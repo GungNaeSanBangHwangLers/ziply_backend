@@ -60,6 +60,7 @@ class SafetyNews(Base):
     title_hash    = Column(String(32), unique=True, nullable=True)  # L2 중복 방지
     published_at  = Column(DateTime, nullable=False)
     category_level = Column(SmallInteger, nullable=False)    # 1, 2, 3
+    category_tag  = Column(String(30), nullable=True)        # 중분류 (예: '재산 범죄', '대인 강력')
     region_name   = Column(String(50), nullable=True)        # '동작구', '상도동' 등
     summary       = Column(Text, nullable=True)              # LLM 요약
     created_at    = Column(DateTime, default=datetime.utcnow)
@@ -141,25 +142,28 @@ def upsert_news(session: Session, news_item: dict) -> Optional[SafetyNews]:
     """
     단건 뉴스를 DB에 저장한다.
     content_url 또는 title_hash 가 이미 존재하면 건너뛴다(L1+L2 중복 방지).
+    savepoint를 사용해 중복 시 해당 건만 롤백, 세션 전체는 유지한다.
     """
     title_hash = make_title_hash(news_item["title"])
 
+    raw_url = news_item.get("content_url")
     record = SafetyNews(
         title=news_item["title"][:255],
-        content_url=news_item.get("content_url"),
+        content_url=raw_url[:500] if raw_url else None,
         title_hash=title_hash,
         published_at=news_item["published_at"],
         category_level=news_item["category_level"],
+        category_tag=news_item.get("category_tag"),
         region_name=news_item.get("region_name"),
         summary=news_item.get("summary"),
     )
     try:
-        session.add(record)
-        session.flush()
+        with session.begin_nested():   # savepoint — 실패 시 이 건만 롤백
+            session.add(record)
+            session.flush()
         logger.debug("저장: %s", record.title[:50])
         return record
     except IntegrityError:
-        session.rollback()
         logger.debug(
             "중복 건너뜀 (URL 또는 제목 해시): %s",
             news_item.get("content_url", news_item["title"][:40]),

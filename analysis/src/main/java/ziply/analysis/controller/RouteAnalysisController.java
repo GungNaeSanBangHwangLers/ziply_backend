@@ -53,16 +53,23 @@ public class RouteAnalysisController {
      * 탐색카드 내 각 집의 동(법정동) 기반 치안 뉴스 집계 조회.
      *
      * @param period 조회 기간 (개월): 3, 6, 12 (기본값 3)
+     * @param page   페이지 번호 (0-based, 기본값 0)
+     * @param size   페이지당 항목 수 (기본값 10, 최대 50)
      */
     @GetMapping("/news/{searchCardId}")
     public ResponseEntity<List<SafetyNewsResponse>> getSafetyNews(
             @PathVariable UUID searchCardId,
             @AuthenticationPrincipal Long userId,
-            @RequestParam(defaultValue = "3") int period) {
+            @RequestParam(defaultValue = "3") int period,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
         if (period != 3 && period != 6 && period != 12) {
             return ResponseEntity.badRequest().build();
         }
-        return ResponseEntity.ok(safetyNewsService.getNewsAnalysis(searchCardId, userId, period));
+        if (size < 1 || size > 50) {
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok(safetyNewsService.getNewsAnalysis(searchCardId, userId, period, page, size));
     }
 
     /**

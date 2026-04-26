@@ -11,7 +11,7 @@ Ziply 치안 뉴스 수집기 - 메인 파이프라인 실행 스크립트
 import argparse
 import logging
 import sys
-import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 
 from claude_classifier import ClaudeClassifier
@@ -38,7 +38,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-BATCH_SIZE = 10
+# 한 번의 OpenAI 호출에 넣을 기사 수 (프롬프트 토큰 한도 고려)
+BATCH_SIZE = 20
+# 동시에 실행할 OpenAI 배치 호출 수 (rate limit 여유분 확보)
+MAX_CONCURRENT_BATCHES = 5
 
 
 def _process_district(
@@ -58,11 +61,14 @@ def _process_district(
 
     articles = deduplicate_by_title(articles)
 
+    batches = [articles[i : i + BATCH_SIZE] for i in range(0, len(articles), BATCH_SIZE)]
+    logger.info("%s 분류 시작: %d건 → %d배치 (동시 %d)", district, len(articles), len(batches), MAX_CONCURRENT_BATCHES)
+
     classified: list[dict] = []
-    for i in range(0, len(articles), BATCH_SIZE):
-        batch = articles[i : i + BATCH_SIZE]
-        classified.extend(classifier.classify_batch(batch))
-        time.sleep(0.3)
+    with ThreadPoolExecutor(max_workers=MAX_CONCURRENT_BATCHES) as pool:
+        futures = {pool.submit(classifier.classify_batch, batch): idx for idx, batch in enumerate(batches)}
+        for future in as_completed(futures):
+            classified.extend(future.result())
 
     excluded = len(articles) - len(classified)
     logger.info(
@@ -109,6 +115,7 @@ def _bulk_upsert_with_ids(session, news_list: list[dict]) -> list[dict]:
 
 def run_pipeline(
     districts: list[str] | None = None,
+    from_district: str | None = None,
     dry_run: bool = False,
 ) -> None:
     """
@@ -116,10 +123,21 @@ def run_pipeline(
 
     Args:
         districts: 수집할 구 목록 (None이면 25개 전체)
+        from_district: 이 구부터 이어서 수집 (앞 구는 건너뜀)
         dry_run: True면 DB 저장 생략
     """
     start_time = datetime.now()
     target = districts or SEOUL_DISTRICTS
+
+    if from_district:
+        if from_district not in target:
+            logger.error("알 수 없는 구 이름: %s", from_district)
+            sys.exit(1)
+        skip_idx = target.index(from_district)
+        skipped = target[:skip_idx]
+        target = target[skip_idx:]
+        if skipped:
+            logger.info("건너뜀 (이미 수집됨): %s", ", ".join(skipped))
     logger.info("=== Ziply 치안 뉴스 수집 시작 (%s) ===", start_time.strftime("%Y-%m-%d %H:%M"))
     logger.info("대상 구: %d개 | dry-run: %s", len(target), dry_run)
 
@@ -176,6 +194,13 @@ def main() -> None:
         help="특정 구만 수집 (예: 동작구). 생략 시 25개 전체 수집.",
     )
     parser.add_argument(
+        "--from-district",
+        type=str,
+        default=None,
+        dest="from_district",
+        help="이 구부터 이어서 수집 (예: 마포구). 앞 구는 건너뜀.",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         default=False,
@@ -191,7 +216,7 @@ def main() -> None:
             sys.exit(1)
         districts = [args.district]
 
-    run_pipeline(districts=districts, dry_run=args.dry_run)
+    run_pipeline(districts=districts, from_district=args.from_district, dry_run=args.dry_run)
 
 
 if __name__ == "__main__":
