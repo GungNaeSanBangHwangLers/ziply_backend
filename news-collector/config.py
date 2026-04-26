@@ -5,19 +5,20 @@ Ziply 치안 뉴스 수집기 - 설정 및 상수 정의
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv()  # news-collector/.env 없으면 자동으로 상위 폴더 탐색
 
 # ── 외부 API ─────────────────────────────────────────────
 NAVER_CLIENT_ID = os.getenv("NAVER_CLIENT_ID")
 NAVER_CLIENT_SECRET = os.getenv("NAVER_CLIENT_SECRET")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-# ── MySQL (ziply-mysql Docker 컨테이너) ───────────────────
+# ── MySQL ─────────────────────────────────────────────────
+# DB_PASSWORD 없으면 루트 .env의 MYSQL_ROOT_PASSWORD 사용
 DB_HOST = os.getenv("DB_HOST", "127.0.0.1")
 DB_PORT = int(os.getenv("DB_PORT", "3306"))
 DB_USER = os.getenv("DB_USER", "root")
-DB_PASSWORD = os.getenv("DB_PASSWORD", "ziply_master_pw")
-DB_NAME = os.getenv("DB_NAME", "ziply_main")
+DB_PASSWORD = os.getenv("DB_PASSWORD") or os.getenv("MYSQL_ROOT_PASSWORD", "ziply_master_pw")
+DB_NAME = os.getenv("DB_NAME", "ziply_analysis")
 
 DATABASE_URL = (
     f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"

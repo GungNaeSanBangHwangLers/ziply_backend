@@ -133,10 +133,13 @@ class QdrantNewsHandler:
             logger.warning("Qdrant upsert 실패 id=%d: %s", mysql_id, e)
             return False
 
+    # OpenAI Embeddings API 및 Qdrant 단일 요청 한도
+    _EMBED_CHUNK = 500
+
     def bulk_upsert(self, news_items: list[dict], mysql_ids: list[int]) -> int:
         """
-        여러 뉴스를 배치로 Qdrant에 저장한다.
-        OpenAI Embeddings API는 배치 요청을 지원하므로 한 번에 임베딩.
+        여러 뉴스를 청크 단위로 나눠 Qdrant에 저장한다.
+        OpenAI Embeddings API / Qdrant 요청 한도(_EMBED_CHUNK)를 초과하지 않도록 분할.
 
         Returns:
             성공한 건수
@@ -144,9 +147,18 @@ class QdrantNewsHandler:
         if not news_items:
             return 0
 
+        total = 0
+        for i in range(0, len(news_items), self._EMBED_CHUNK):
+            chunk_items = news_items[i : i + self._EMBED_CHUNK]
+            chunk_ids   = mysql_ids[i : i + self._EMBED_CHUNK]
+            total += self._upsert_chunk(chunk_items, chunk_ids)
+
+        logger.info("Qdrant 배치 upsert 완료: %d건", total)
+        return total
+
+    def _upsert_chunk(self, news_items: list[dict], mysql_ids: list[int]) -> int:
         try:
             texts = [self._build_embed_text(item) for item in news_items]
-
             response = self._openai.embeddings.create(
                 model=EMBEDDING_MODEL,
                 input=[t[:8000] for t in texts],
@@ -170,17 +182,17 @@ class QdrantNewsHandler:
                         "content_url": item.get("content_url", ""),
                         "published_at": published_str,
                         "category_level": item.get("category_level"),
+                        "category_tag": item.get("category_tag"),
                         "region_name": item.get("region_name", ""),
                         "summary": item.get("summary", ""),
                     },
                 ))
 
             self._qdrant.upsert(collection_name=COLLECTION_NAME, points=points)
-            logger.info("Qdrant 배치 upsert 완료: %d건", len(points))
             return len(points)
 
         except Exception as e:
-            logger.error("Qdrant 배치 upsert 실패: %s", e)
+            logger.error("Qdrant 청크 upsert 실패: %s", e)
             return 0
 
     def search(self, query: str, region_name: Optional[str] = None,

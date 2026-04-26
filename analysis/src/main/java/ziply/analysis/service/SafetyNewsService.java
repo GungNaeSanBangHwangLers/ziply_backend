@@ -2,7 +2,6 @@ package ziply.analysis.service;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -10,6 +9,9 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -30,7 +32,13 @@ import org.springframework.beans.factory.annotation.Value;
 @RequiredArgsConstructor
 public class SafetyNewsService {
 
-    private static final int MAX_RECENT_NEWS = 5;
+    private static final int DEFAULT_PAGE_SIZE = 10;
+
+    private static final Map<Integer, String> LEVEL_NAME = Map.of(
+        1, "생활 불편 / 무질서",
+        2, "안전 불안 / 재산 위협",
+        3, "신변 위협 / 강력 범죄"
+    );
 
     private final SafetyNewsRepository safetyNewsRepository;
     private final HouseRouteAnalysisRepository routeAnalysisRepository;
@@ -47,7 +55,7 @@ public class SafetyNewsService {
      * @param period       조회 기간 (개월): 3, 6, 12
      */
     @Transactional(readOnly = true)
-    public List<SafetyNewsResponse> getNewsAnalysis(UUID searchCardId, Long userId, int period) {
+    public List<SafetyNewsResponse> getNewsAnalysis(UUID searchCardId, Long userId, int period, int page, int size) {
         checkCardOwner(searchCardId, userId);
 
         // HouseAnalysis에서 searchCard 소속 집 목록 및 regionName 조회
@@ -82,17 +90,17 @@ public class SafetyNewsService {
                         return buildEmptyResponse(houseId, label, period);
                     }
 
-                    return buildNewsResponse(houseId, label, regionName, period, since);
+                    return buildNewsResponse(houseId, label, regionName, period, since, page, size);
                 })
                 .collect(Collectors.toList());
     }
 
     private SafetyNewsResponse buildNewsResponse(Long houseId, String label, String regionName,
-                                                  int period, LocalDateTime since) {
-        List<SafetyNews> newsList = safetyNewsRepository.findByRegionAndPeriod(regionName, since);
-
+                                                  int period, LocalDateTime since, int page, int size) {
+        // 레벨 카운트는 전체 조회
+        List<SafetyNews> allNews = safetyNewsRepository.findByRegionAndPeriod(regionName, since);
         int level1 = 0, level2 = 0, level3 = 0;
-        for (SafetyNews n : newsList) {
+        for (SafetyNews n : allNews) {
             switch (n.getCategoryLevel()) {
                 case 1 -> level1++;
                 case 2 -> level2++;
@@ -101,13 +109,16 @@ public class SafetyNewsService {
         }
         int total = level1 + level2 + level3;
 
-        List<NewsItem> recent = newsList.stream()
-                .limit(MAX_RECENT_NEWS)
+        // 페이지네이션 뉴스 조회 (최신순)
+        PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "publishedAt"));
+        Page<SafetyNews> newsPage = safetyNewsRepository.findByRegionAndPeriodPageable(regionName, since, pageable);
+
+        List<NewsItem> recent = newsPage.getContent().stream()
                 .map(n -> NewsItem.builder()
-                        .id(n.getId())
                         .title(n.getTitle())
-                        .categoryLevel(n.getCategoryLevel())
-                        .publishedAt(n.getPublishedAt())
+                        .categoryLevel(LEVEL_NAME.getOrDefault(n.getCategoryLevel(), "알 수 없음"))
+                        .categoryTag(n.getCategoryTag())
+                        .publishedAt(n.getPublishedAt().toLocalDate())
                         .contentUrl(n.getContentUrl())
                         .summary(n.getSummary())
                         .build())
@@ -116,28 +127,28 @@ public class SafetyNewsService {
         String message = buildMessage(regionName, period, level1, level2, level3, total);
 
         return SafetyNewsResponse.builder()
-                .houseId(houseId)
                 .label(label)
                 .regionName(regionName)
-                .period(period)
                 .level1Count(level1)
                 .level2Count(level2)
                 .level3Count(level3)
-                .totalCount(total)
                 .message(message)
                 .recentNews(recent)
+                .page(newsPage.getNumber())
+                .size(newsPage.getSize())
+                .totalCount(newsPage.getTotalElements())
+                .totalPages(newsPage.getTotalPages())
                 .build();
     }
 
     private SafetyNewsResponse buildEmptyResponse(Long houseId, String label, int period) {
         return SafetyNewsResponse.builder()
-                .houseId(houseId)
                 .label(label)
                 .regionName(null)
-                .period(period)
-                .level1Count(0).level2Count(0).level3Count(0).totalCount(0)
+                .level1Count(0).level2Count(0).level3Count(0)
                 .message("이 집의 지역 정보를 확인할 수 없어 치안 뉴스를 불러오지 못했어요.")
                 .recentNews(Collections.emptyList())
+                .page(0).size(0).totalCount(0).totalPages(0)
                 .build();
     }
 

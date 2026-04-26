@@ -27,6 +27,9 @@ public class SafetyNews {
     @Column(name = "category_level", nullable = false)
     private Integer categoryLevel;   // 1, 2, 3
 
+    @Column(name = "category_tag", length = 30)
+    private String categoryTag;      // 중분류 (예: "재산 범죄", "대인 강력")
+
     @Column(name = "region_name")
     private String regionName;       // 예: 상도동, 동작구
 
