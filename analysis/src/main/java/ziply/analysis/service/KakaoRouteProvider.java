@@ -1,7 +1,6 @@
 package ziply.analysis.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -14,15 +13,18 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAdjusters;
 
 @Component
-@RequiredArgsConstructor
 @Slf4j
 public class KakaoRouteProvider {
 
     @Value("${kakao.api.key}")
     private String kakaoRestApiKey;
 
-    private final WebClient webClient = WebClient.create("https://apis-navi.kakaomobility.com");
+    private final WebClient webClient;
     private static final String DIRECTION_ENDPOINT = "/v1/directions";
+
+    public KakaoRouteProvider(WebClient.Builder webClientBuilder) {
+        this.webClient = webClientBuilder.baseUrl("https://apis-navi.kakaomobility.com").build();
+    }
 
     public record RouteResult(int durationSeconds, int distanceMeters) {
     }
@@ -31,30 +33,32 @@ public class KakaoRouteProvider {
         String origin = String.format("%f,%f", startLon, startLat);
         String destination = String.format("%f,%f", endLon, endLat);
 
-        KakaoRouteResponse response;
         try {
-            response = webClient.get()
-                    .uri(uriBuilder -> uriBuilder.path(DIRECTION_ENDPOINT).queryParam("origin", origin)
-                            .queryParam("destination", destination).queryParam("priority", "RECOMMEND")
+            KakaoRouteResponse response = webClient.get()
+                    .uri(uriBuilder -> uriBuilder.path(DIRECTION_ENDPOINT)
+                            .queryParam("origin", origin)
+                            .queryParam("destination", destination)
+                            .queryParam("priority", "RECOMMEND")
                             .queryParam("profile", "walking").build())
-                    .header("Authorization", "KakaoAK " + kakaoRestApiKey).retrieve()
+                    .header("Authorization", "KakaoAK " + kakaoRestApiKey)
+                    .retrieve()
                     .bodyToMono(KakaoRouteResponse.class).block();
 
+            if (response == null || response.getRoutes() == null || response.getRoutes().isEmpty()) {
+                log.warn("카카오 도보 API: 경로를 찾을 수 없음. Origin={}, Dest={}", origin, destination);
+                return new RouteResult(0, 0);
+            }
+            return new RouteResult(0, response.getDistanceMeters());
+
         } catch (Exception e) {
-            log.error("카카오 경로 API 호출 실패: Origin={}, Dest={}", origin, destination, e);
-            throw new RuntimeException("카카오 API 호출 실패", e);
-        }
-        if (response == null || response.getRoutes() == null || response.getRoutes().isEmpty()) {
-            log.warn("카카오 API: 경로를 찾을 수 없음 (Empty Route). Origin={}, Dest={}", origin, destination);
+            log.error("카카오 도보 경로 API 호출 실패: Origin={}, Dest={}", origin, destination, e);
             return new RouteResult(0, 0);
         }
-        return new RouteResult(0, response.getDistanceMeters());
     }
 
     public RouteResult getCarRoute(double startLat, double startLon, double endLat, double endLon) {
         String origin = String.format("%f,%f", startLon, startLat);
         String destination = String.format("%f,%f", endLon, endLat);
-
         String departureTime = getNextWeekdayEightAM();
 
         try {
@@ -62,7 +66,7 @@ public class KakaoRouteProvider {
                     .uri(uriBuilder -> uriBuilder.path(DIRECTION_ENDPOINT)
                             .queryParam("origin", origin)
                             .queryParam("destination", destination)
-                            .queryParam("origin_time", departureTime) // 출근 시간 적용
+                            .queryParam("origin_time", departureTime)
                             .queryParam("priority", "RECOMMEND")
                             .build())
                     .header("Authorization", "KakaoAK " + kakaoRestApiKey)
@@ -78,11 +82,10 @@ public class KakaoRouteProvider {
             JsonNode summary = response.at("/routes/0/summary");
             int duration = summary.path("duration").asInt();
             int distance = summary.path("distance").asInt();
-
             return new RouteResult(duration, distance);
 
         } catch (Exception e) {
-            log.error("카카오 자동차 경로 API 호출 실패 (출근시간 모드): {}", e.getMessage());
+            log.error("카카오 자동차 경로 API 호출 실패: Origin={}, Dest={}", origin, destination, e);
             return new RouteResult(0, 0);
         }
     }

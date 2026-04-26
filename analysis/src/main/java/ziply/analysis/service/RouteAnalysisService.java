@@ -5,13 +5,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatusCode;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
 import ziply.analysis.domain.HouseAnalysis;
 import ziply.analysis.dto.response.*;
 import ziply.analysis.event.HouseCreatedEvent;
@@ -21,6 +16,7 @@ import ziply.analysis.repository.HouseRouteAnalysisRepository;
 import ziply.analysis.service.KakaoRouteProvider.RouteResult;
 import ziply.analysis.service.safety.SafetyScoringService;
 import ziply.analysis.service.safety.SafetyScoringService.SafetyAnalysisResult;
+import ziply.analysis.util.HouseLabelMapper;
 
 @Slf4j
 @Service
@@ -31,7 +27,6 @@ public class RouteAnalysisService {
     private static final double AVG_BIKE_SPEED_KM_H = 15.0;
     private static final int MINUTES_IN_HOUR = 60;
 
-    // --- [추가] 안내 메시지 상수 처리 ---
     private static final String CLIMATE_CARD_INFO = "서울지역 대중교통은 기후동행카드를 통해 62,000원(만19~39세 55,000원)으로 30일 무제한 이용가능하니 고려해보세요.";
     private static final String BIKE_RENTAL_INFO = "서울시 따릉이는 1일권(1일 1시간 기준 1,000원)과 30일 정기권(30일간 매일 1시간 이용, 5,000원)이 있어요.";
 
@@ -41,11 +36,9 @@ public class RouteAnalysisService {
     private final KakaoInfrastructureService kakaoInfrastructureService;
     private final NoiseScoringService noiseScoringService;
     private final SafetyScoringService safetyScoringService;
-    private final WebClient.Builder webClientBuilder;
     private final OdsayTransitProvider transitProvider;
-
-    @Value("${services.review.url:http://review-service:8080}")
-    private String reviewServiceUrl;
+    private final CardOwnershipValidator cardOwnershipValidator;
+    private final HouseLabelMapper houseLabelMapper;
 
     @Transactional
     public void processHouseCreation(HouseCreatedEvent event) {
@@ -101,7 +94,6 @@ public class RouteAnalysisService {
                 (distanceKm > 0) ? (int) Math.round((distanceKm / AVG_WALKING_SPEED_KM_H) * MINUTES_IN_HOUR) : 0;
         int bikeTimeMin = (distanceKm > 0) ? (int) Math.round((distanceKm / AVG_BIKE_SPEED_KM_H) * MINUTES_IN_HOUR) : 0;
 
-        // 대중교통 정보가 없으면 도보 추천 (시간 제한 없음)
         if (transit.timeMin() == 0 && "정보 없음".equals(transit.paymentStr()) && walkTimeMin > 0) {
             transit = new TransitResult(0, "도보가 더 빨라요", 0);
         }
@@ -124,13 +116,13 @@ public class RouteAnalysisService {
 
     @Transactional(readOnly = true)
     public List<BasePointAnalysisDto> getSearchCardDistanceAnalysis(UUID searchCardId, Long userId) {
-        checkCardOwner(searchCardId, userId);
+        cardOwnershipValidator.validate(searchCardId, userId);
         List<HouseAnalysis> allData = routeAnalysisRepository.findBySearchCardId(searchCardId);
         if (allData.isEmpty()) {
             return Collections.emptyList();
         }
 
-        Map<Long, String> houseLabelMap = createHouseLabelMap(allData);
+        Map<Long, String> houseLabelMap = houseLabelMapper.build(allData);
         Map<Long, List<HouseAnalysis>> grouped = allData.stream()
                 .collect(Collectors.groupingBy(HouseAnalysis::getBasePointId));
 
@@ -142,11 +134,9 @@ public class RouteAnalysisService {
     private BasePointAnalysisDto createBasePointAnalysis(
             List<HouseAnalysis> results,
             Map<Long, String> houseLabelMap) {
-        
-        // 도보 시간 기준 정렬
+
         results.sort(Comparator.comparing(HouseAnalysis::getWalkingTimeMin, Comparator.nullsLast(Integer::compareTo)));
 
-        // 도보 추천 집과 교통비 집 분류
         Map<Boolean, List<HouseAnalysis>> partitioned = results.stream()
                 .collect(Collectors.partitioningBy(
                     e -> "도보가 더 빨라요".equals(e.getTransitPaymentStr())
@@ -160,15 +150,12 @@ public class RouteAnalysisService {
                 .map(e -> formatFeeDetail(e, houseLabelMap.get(e.getHouseId())))
                 .toList();
 
-        // 메시지 생성
         String transportMessage = buildTransportMessage(feeDetails, walkingLabels);
-        
-        // 자전거 메시지: 모든 집이 도보 추천이면 불필요
-        String bikeMessage = (feeDetails.isEmpty() && !walkingLabels.isEmpty()) 
-            ? null 
+
+        String bikeMessage = (feeDetails.isEmpty() && !walkingLabels.isEmpty())
+            ? null
             : BIKE_RENTAL_INFO;
 
-        // DTO 변환
         List<HouseAnalysisDto> houseDtos = results.stream()
                 .map(e -> HouseAnalysisDto.from(e, houseLabelMap.get(e.getHouseId())))
                 .toList();
@@ -194,20 +181,17 @@ public class RouteAnalysisService {
     private String buildTransportMessage(List<String> feeDetails, List<String> walkingLabels) {
         StringBuilder sb = new StringBuilder();
 
-        // 교통비 정보
         if (!feeDetails.isEmpty()) {
             sb.append("한 달(30일) 기준 왕복 교통비는 ")
               .append(String.join(", ", feeDetails))
               .append("이에요. ");
         }
 
-        // 도보 추천
         if (!walkingLabels.isEmpty()) {
             sb.append(String.join(", ", walkingLabels))
               .append("는 도보로 이동 가능해요. ");
         }
 
-        // 기후동행카드 안내 (교통비 정보가 있을 때만)
         if (!feeDetails.isEmpty()) {
             sb.append(CLIMATE_CARD_INFO);
         }
@@ -217,13 +201,13 @@ public class RouteAnalysisService {
 
     @Transactional(readOnly = true)
     public List<LifeScoreAnalysisResponse> getLifeScoreAnalysis(UUID searchCardId, Long userId) {
-        checkCardOwner(searchCardId, userId);
+        cardOwnershipValidator.validate(searchCardId, userId);
         List<HouseAnalysis> allData = routeAnalysisRepository.findBySearchCardId(searchCardId);
         if (allData.isEmpty()) {
             return Collections.emptyList();
         }
 
-        Map<Long, String> labelMap = createHouseLabelMap(allData);
+        Map<Long, String> labelMap = houseLabelMapper.build(allData);
 
         return allData.stream()
                 .collect(Collectors.groupingBy(HouseAnalysis::getHouseId))
@@ -251,13 +235,13 @@ public class RouteAnalysisService {
 
     @Transactional(readOnly = true)
     public List<SafetyAnalysisResponse> getSafetyAnalysis(UUID searchCardId, Long userId) {
-        checkCardOwner(searchCardId, userId);
+        cardOwnershipValidator.validate(searchCardId, userId);
         List<HouseAnalysis> allData = routeAnalysisRepository.findBySearchCardId(searchCardId);
         if (allData.isEmpty()) {
             return Collections.emptyList();
         }
 
-        Map<Long, String> labelMap = createHouseLabelMap(allData);
+        Map<Long, String> labelMap = houseLabelMapper.build(allData);
 
         return allData.stream()
                 .collect(Collectors.groupingBy(HouseAnalysis::getHouseId))
@@ -279,29 +263,6 @@ public class RouteAnalysisService {
                 })
                 .sorted(Comparator.comparing(SafetyAnalysisResponse::getHouseId))
                 .toList();
-    }
-
-    private Map<Long, String> createHouseLabelMap(List<HouseAnalysis> allData) {
-        List<Long> distinctHouseIds = allData.stream().map(HouseAnalysis::getHouseId).distinct().sorted().toList();
-        Map<Long, String> labelMap = new HashMap<>();
-        for (int i = 0; i < distinctHouseIds.size(); i++) {
-            labelMap.put(distinctHouseIds.get(i), String.valueOf((char) ('A' + i)));
-        }
-        return labelMap;
-    }
-
-    private void checkCardOwner(UUID searchCardId, Long userId) {
-        webClientBuilder.build().get()
-                .uri(reviewServiceUrl + "/api/v1/review/card/{searchCardId}/owner-check?userId={userId}", searchCardId,
-                        userId)
-                .retrieve().onStatus(HttpStatusCode::isError, cr -> Mono.error(new AccessDeniedException("권한 확인 실패")))
-                .bodyToMono(Boolean.class)
-                .map(isOwner -> {
-                    if (!isOwner) {
-                        throw new AccessDeniedException("접근 권한이 없습니다.");
-                    }
-                    return isOwner;
-                }).block();
     }
 
     private record AnalysisPoint(Long id, String name, double lat, double lon) {

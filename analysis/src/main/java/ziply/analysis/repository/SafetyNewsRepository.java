@@ -43,4 +43,17 @@ public interface SafetyNewsRepository extends JpaRepository<SafetyNews, Long> {
     List<Object[]> countByLevelAndRegion(
             @Param("regionName") String regionName,
             @Param("since") LocalDateTime since);
+
+    /**
+     * 레벨 필터링 + 페이지네이션 조회.
+     */
+    @Query("SELECT s FROM SafetyNews s " +
+           "WHERE s.regionName LIKE %:regionName% " +
+           "AND s.publishedAt >= :since " +
+           "AND s.categoryLevel = :level")
+    Page<SafetyNews> findByRegionAndPeriodAndLevel(
+            @Param("regionName") String regionName,
+            @Param("since") LocalDateTime since,
+            @Param("level") int level,
+            Pageable pageable);
 }

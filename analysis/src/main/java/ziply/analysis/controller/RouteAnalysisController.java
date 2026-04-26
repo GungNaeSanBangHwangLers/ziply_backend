@@ -53,6 +53,7 @@ public class RouteAnalysisController {
      * 탐색카드 내 각 집의 동(법정동) 기반 치안 뉴스 집계 조회.
      *
      * @param period 조회 기간 (개월): 3, 6, 12 (기본값 3)
+     * @param level  뉴스 레벨: 1(생활 불편), 2(안전 불안), 3(신변 위협) (기본값 3)
      * @param page   페이지 번호 (0-based, 기본값 0)
      * @param size   페이지당 항목 수 (기본값 10, 최대 50)
      */
@@ -61,16 +62,22 @@ public class RouteAnalysisController {
             @PathVariable UUID searchCardId,
             @AuthenticationPrincipal Long userId,
             @RequestParam(defaultValue = "3") int period,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        if (period != 3 && period != 6 && period != 12) {
+            @RequestParam(defaultValue = "3") int level,
+            @RequestParam(defaultValue = "0") int page) {
+        if (!isValidPeriod(period) || !isValidLevel(level)) {
             return ResponseEntity.badRequest().build();
         }
-        if (size < 1 || size > 50) {
-            return ResponseEntity.badRequest().build();
-        }
-        return ResponseEntity.ok(safetyNewsService.getNewsAnalysis(searchCardId, userId, period, page, size));
+        return ResponseEntity.ok(safetyNewsService.getNewsAnalysis(searchCardId, userId, period, level, page, 10));
     }
+
+    private boolean isValidPeriod(int period) {
+        return period == 3 || period == 6 || period == 12;
+    }
+
+    private boolean isValidLevel(int level) {
+        return level >= 1 && level <= 3;
+    }
+
 
     /**
      * 자연어 쿼리로 치안 뉴스 시맨틱 검색 (Qdrant).
