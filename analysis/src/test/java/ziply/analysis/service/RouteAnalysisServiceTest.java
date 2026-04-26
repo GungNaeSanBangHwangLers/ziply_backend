@@ -5,8 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -17,13 +16,10 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Answers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
 import ziply.analysis.domain.HouseAnalysis;
 import ziply.analysis.dto.response.BasePointAnalysisDto;
 import ziply.analysis.dto.response.LifeScoreAnalysisResponse;
@@ -32,6 +28,7 @@ import ziply.analysis.event.HouseUpdatedEvent;
 import ziply.analysis.repository.HouseInfrastructureRepository;
 import ziply.analysis.repository.HouseRouteAnalysisRepository;
 import ziply.analysis.service.safety.SafetyScoringService;
+import ziply.analysis.util.HouseLabelMapper;
 
 @ExtendWith(MockitoExtension.class)
 class RouteAnalysisServiceTest {
@@ -48,10 +45,10 @@ class RouteAnalysisServiceTest {
     private NoiseScoringService noiseScoringService;
     @Mock
     private SafetyScoringService safetyScoringService;
-    @Mock(answer = Answers.RETURNS_DEEP_STUBS)
-    private WebClient.Builder webClientBuilder;
     @Mock
     private OdsayTransitProvider transitProvider;
+    @Mock
+    private CardOwnershipValidator cardOwnershipValidator;
 
     private RouteAnalysisService routeAnalysisService;
 
@@ -64,16 +61,15 @@ class RouteAnalysisServiceTest {
                 kakaoInfrastructureService,
                 noiseScoringService,
                 safetyScoringService,
-                webClientBuilder,
-                transitProvider
+                transitProvider,
+                cardOwnershipValidator,
+                new HouseLabelMapper()
         );
-        ReflectionTestUtils.setField(routeAnalysisService, "reviewServiceUrl", "http://review-service:8080");
     }
 
     @Test
     void getSearchCardDistanceAnalysisReturnsEmptyWhenNoData() {
         UUID searchCardId = UUID.randomUUID();
-        mockOwnerCheck(true);
         when(routeAnalysisRepository.findBySearchCardId(searchCardId)).thenReturn(List.of());
 
         List<BasePointAnalysisDto> result = routeAnalysisService.getSearchCardDistanceAnalysis(searchCardId, 1L);
@@ -84,7 +80,6 @@ class RouteAnalysisServiceTest {
     @Test
     void getSearchCardDistanceAnalysisParsesTransitPaymentString() {
         UUID searchCardId = UUID.randomUUID();
-        mockOwnerCheck(true);
 
         HouseAnalysis houseA = HouseAnalysis.builder()
                 .searchCardId(searchCardId)
@@ -122,7 +117,8 @@ class RouteAnalysisServiceTest {
     @Test
     void getSearchCardDistanceAnalysisThrowsWhenUserIsNotOwner() {
         UUID searchCardId = UUID.randomUUID();
-        mockOwnerCheck(false);
+        doThrow(new AccessDeniedException("접근 권한이 없습니다."))
+                .when(cardOwnershipValidator).validate(searchCardId, 1L);
 
         assertThatThrownBy(() -> routeAnalysisService.getSearchCardDistanceAnalysis(searchCardId, 1L))
                 .isInstanceOf(AccessDeniedException.class);
@@ -149,7 +145,6 @@ class RouteAnalysisServiceTest {
     @Test
     void getLifeScoreAnalysisReturnsEmptyWhenNoData() {
         UUID searchCardId = UUID.randomUUID();
-        mockOwnerCheck(true);
         when(routeAnalysisRepository.findBySearchCardId(searchCardId)).thenReturn(List.of());
 
         List<LifeScoreAnalysisResponse> result = routeAnalysisService.getLifeScoreAnalysis(searchCardId, 1L);
@@ -160,7 +155,6 @@ class RouteAnalysisServiceTest {
     @Test
     void getLifeScoreAnalysisUsesFallbackMessageWhenInfraMissing() {
         UUID searchCardId = UUID.randomUUID();
-        mockOwnerCheck(true);
 
         HouseAnalysis house = HouseAnalysis.builder()
                 .searchCardId(searchCardId)
@@ -181,7 +175,6 @@ class RouteAnalysisServiceTest {
     @Test
     void getSafetyAnalysisReturnsSortedByHouseId() {
         UUID searchCardId = UUID.randomUUID();
-        mockOwnerCheck(true);
 
         HouseAnalysis highId = HouseAnalysis.builder()
                 .searchCardId(searchCardId)
@@ -208,15 +201,5 @@ class RouteAnalysisServiceTest {
         assertThat(result).hasSize(2);
         assertThat(result.get(0).getHouseId()).isEqualTo(10L);
         assertThat(result.get(1).getHouseId()).isEqualTo(20L);
-    }
-
-    private void mockOwnerCheck(boolean isOwner) {
-        when(webClientBuilder.build()
-                .get()
-                .uri(anyString(), any(), any())
-                .retrieve()
-                .onStatus(any(), any())
-                .bodyToMono(eq(Boolean.class)))
-                .thenReturn(Mono.just(isOwner));
     }
 }

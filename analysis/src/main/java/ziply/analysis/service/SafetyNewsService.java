@@ -2,7 +2,6 @@ package ziply.analysis.service;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -12,27 +11,20 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpStatusCode;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
 import ziply.analysis.domain.HouseAnalysis;
 import ziply.analysis.domain.SafetyNews;
 import ziply.analysis.dto.response.SafetyNewsResponse;
 import ziply.analysis.dto.response.SafetyNewsResponse.NewsItem;
 import ziply.analysis.repository.HouseRouteAnalysisRepository;
 import ziply.analysis.repository.SafetyNewsRepository;
-
-import org.springframework.beans.factory.annotation.Value;
+import ziply.analysis.util.HouseLabelMapper;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class SafetyNewsService {
-
-    private static final int DEFAULT_PAGE_SIZE = 10;
 
     private static final Map<Integer, String> LEVEL_NAME = Map.of(
         1, "생활 불편 / 무질서",
@@ -42,10 +34,8 @@ public class SafetyNewsService {
 
     private final SafetyNewsRepository safetyNewsRepository;
     private final HouseRouteAnalysisRepository routeAnalysisRepository;
-    private final WebClient.Builder webClientBuilder;
-
-    @Value("${services.review.url:http://review-service:8080}")
-    private String reviewServiceUrl;
+    private final CardOwnershipValidator cardOwnershipValidator;
+    private final HouseLabelMapper houseLabelMapper;
 
     /**
      * 탐색카드 내 각 집의 동(regionName) 기반으로 치안 뉴스를 집계하여 반환.
@@ -56,24 +46,21 @@ public class SafetyNewsService {
      */
     @Transactional(readOnly = true)
     public List<SafetyNewsResponse> getNewsAnalysis(UUID searchCardId, Long userId, int period, int page, int size) {
-        checkCardOwner(searchCardId, userId);
+        cardOwnershipValidator.validate(searchCardId, userId);
 
-        // HouseAnalysis에서 searchCard 소속 집 목록 및 regionName 조회
         List<HouseAnalysis> allData = routeAnalysisRepository.findBySearchCardId(searchCardId);
         if (allData.isEmpty()) {
             return Collections.emptyList();
         }
 
-        // houseId → label (A, B, C...)
-        Map<Long, String> labelMap = buildLabelMap(allData);
+        Map<Long, String> labelMap = houseLabelMapper.build(allData);
 
-        // houseId → regionName (중복 제거, 첫 번째 값 사용)
         Map<Long, String> regionMap = allData.stream()
                 .filter(ha -> ha.getRegionName() != null)
                 .collect(Collectors.toMap(
                         HouseAnalysis::getHouseId,
                         HouseAnalysis::getRegionName,
-                        (a, b) -> a   // 중복 시 첫 번째 유지
+                        (a, b) -> a
                 ));
 
         LocalDateTime since = LocalDateTime.now().minusMonths(period);
@@ -87,17 +74,16 @@ public class SafetyNewsService {
 
                     if (regionName == null || regionName.isBlank()) {
                         log.warn("[SafetyNews] houseId={} regionName 없음, 집계 불가", houseId);
-                        return buildEmptyResponse(houseId, label, period);
+                        return buildEmptyResponse(label);
                     }
 
-                    return buildNewsResponse(houseId, label, regionName, period, since, page, size);
+                    return buildNewsResponse(label, regionName, period, since, page, size);
                 })
                 .collect(Collectors.toList());
     }
 
-    private SafetyNewsResponse buildNewsResponse(Long houseId, String label, String regionName,
+    private SafetyNewsResponse buildNewsResponse(String label, String regionName,
                                                   int period, LocalDateTime since, int page, int size) {
-        // 레벨 카운트는 전체 조회
         List<SafetyNews> allNews = safetyNewsRepository.findByRegionAndPeriod(regionName, since);
         int level1 = 0, level2 = 0, level3 = 0;
         for (SafetyNews n : allNews) {
@@ -109,7 +95,6 @@ public class SafetyNewsService {
         }
         int total = level1 + level2 + level3;
 
-        // 페이지네이션 뉴스 조회 (최신순)
         PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "publishedAt"));
         Page<SafetyNews> newsPage = safetyNewsRepository.findByRegionAndPeriodPageable(regionName, since, pageable);
 
@@ -141,7 +126,7 @@ public class SafetyNewsService {
                 .build();
     }
 
-    private SafetyNewsResponse buildEmptyResponse(Long houseId, String label, int period) {
+    private SafetyNewsResponse buildEmptyResponse(String label) {
         return SafetyNewsResponse.builder()
                 .label(label)
                 .regionName(null)
@@ -170,30 +155,5 @@ public class SafetyNewsService {
         }
 
         return sb.toString();
-    }
-
-    private Map<Long, String> buildLabelMap(List<HouseAnalysis> allData) {
-        List<Long> sortedIds = allData.stream()
-                .map(HouseAnalysis::getHouseId)
-                .distinct().sorted().toList();
-        Map<Long, String> map = new HashMap<>();
-        for (int i = 0; i < sortedIds.size(); i++) {
-            map.put(sortedIds.get(i), String.valueOf((char) ('A' + i)));
-        }
-        return map;
-    }
-
-    private void checkCardOwner(UUID searchCardId, Long userId) {
-        webClientBuilder.build().get()
-                .uri(reviewServiceUrl + "/api/v1/review/card/{searchCardId}/owner-check?userId={userId}",
-                        searchCardId, userId)
-                .retrieve()
-                .onStatus(HttpStatusCode::isError,
-                        cr -> Mono.error(new AccessDeniedException("권한 확인 실패")))
-                .bodyToMono(Boolean.class)
-                .map(isOwner -> {
-                    if (!isOwner) throw new AccessDeniedException("접근 권한이 없습니다.");
-                    return isOwner;
-                }).block();
     }
 }

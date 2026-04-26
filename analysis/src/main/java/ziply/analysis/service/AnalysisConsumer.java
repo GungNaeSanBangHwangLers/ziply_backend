@@ -1,7 +1,6 @@
 package ziply.analysis.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,7 +20,7 @@ public class AnalysisConsumer {
     private final HouseRouteAnalysisRepository houseRouteAnalysisRepository;
     private final RouteAnalysisService routeAnalysisService;
     private final DemoAnalysisService demoAnalysisService;
-    private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
+    private final ObjectMapper objectMapper;
 
     @KafkaListener(topics = "house-created", groupId = "analysis-group")
     public void handleHouseCreatedEvent(String message) {
