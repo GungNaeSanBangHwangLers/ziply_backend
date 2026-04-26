@@ -26,10 +26,10 @@ public class AnalysisConsumer {
     public void handleHouseCreatedEvent(String message) {
         try {
             HouseCreatedEvent event = objectMapper.readValue(message, HouseCreatedEvent.class);
-            log.info("[Analyst] 생성 이벤트 수신 성공: {}", event);
+            log.info("집 생성 이벤트 수신: {}", event);
             routeAnalysisService.processHouseCreation(event);
         } catch (Exception e) {
-            log.error("[Analyst] 생성 메시지 파싱 에러: {}", e.getMessage());
+            log.error("집 생성 메시지 처리 실패: {}", e.getMessage(), e);
         }
     }
 
@@ -37,10 +37,10 @@ public class AnalysisConsumer {
     public void handleHouseUpdatedEvent(String message) {
         try {
             HouseUpdatedEvent event = objectMapper.readValue(message, HouseUpdatedEvent.class);
-            log.info("[Analyst] 수정 이벤트 수신 성공: {}", event);
+            log.info("집 수정 이벤트 수신: {}", event);
             routeAnalysisService.processHouseUpdate(event);
         } catch (Exception e) {
-            log.error("[Analyst] 수정 메시지 파싱 에러: {}", e.getMessage());
+            log.error("집 수정 메시지 처리 실패: {}", e.getMessage(), e);
         }
     }
 
@@ -48,15 +48,13 @@ public class AnalysisConsumer {
     @KafkaListener(topics = "house-deleted", groupId = "analysis-group")
     public void handleHouseDeleted(String houseIdStr) {
         String cleanId = houseIdStr.replace("\"", "");
-
         try {
             Long houseId = Long.parseLong(cleanId);
-            log.info("[Analyst] 삭제 이벤트 수신 성공 - HouseId: {}", houseId);
-
+            log.info("집 삭제 이벤트 수신: houseId={}", houseId);
             houseRouteAnalysisRepository.deleteByHouseId(houseId);
-            log.info("[Analyst] 분석 데이터 삭제 완료 - HouseId: {}", houseId);
+            log.info("집 분석 데이터 삭제 완료: houseId={}", houseId);
         } catch (NumberFormatException e) {
-            log.error("[Analyst] 숫자 변환 실패. 원본 데이터: {}, 정제된 데이터: {}", houseIdStr, cleanId);
+            log.error("집 삭제 이벤트 houseId 파싱 실패: raw={}, clean={}", houseIdStr, cleanId, e);
         }
     }
 
@@ -64,16 +62,13 @@ public class AnalysisConsumer {
     @KafkaListener(topics = "search-card-deleted", groupId = "analysis-group")
     public void handleCardDeleted(String cardIdStr) {
         String cleanId = cardIdStr.replace("\"", "");
-
         try {
             UUID searchCardId = UUID.fromString(cleanId);
-            log.info("[Analyst] 카드 삭제 이벤트 수신 - CardId: {}", searchCardId);
-
+            log.info("탐색카드 삭제 이벤트 수신: searchCardId={}", searchCardId);
             houseRouteAnalysisRepository.deleteBySearchCardId(searchCardId);
-
-            log.info("[Analyst] 해당 카드의 모든 분석 데이터 삭제 완료 - CardId: {}", searchCardId);
+            log.info("탐색카드 분석 데이터 삭제 완료: searchCardId={}", searchCardId);
         } catch (Exception e) {
-            log.error("[Analyst] 카드 ID 변환 실패: {}", cleanId);
+            log.error("탐색카드 삭제 이벤트 ID 파싱 실패: raw={}", cleanId, e);
         }
     }
 
@@ -82,14 +77,11 @@ public class AnalysisConsumer {
     public void handleDemoDataReset(String message) {
         try {
             DemoDataResetEvent event = objectMapper.readValue(message, DemoDataResetEvent.class);
-            log.info("[DEMO-Analysis] 데모 초기화 이벤트 수신 - userId: {}, houseIds: {}", 
-                    event.getUserId(), event.getHouseIds());
-            
+            log.info("데모 초기화 이벤트 수신: userId={}, houseIds={}", event.getUserId(), event.getHouseIds());
             demoAnalysisService.resetDemoAnalysisData(event.getHouseIds());
-            
-            log.info("[DEMO-Analysis] 데모 초기화 처리 완료 - userId: {}", event.getUserId());
+            log.info("데모 초기화 완료: userId={}", event.getUserId());
         } catch (Exception e) {
-            log.error("[DEMO-Analysis] 데모 초기화 처리 실패: {}", e.getMessage(), e);
+            log.error("데모 초기화 처리 실패: {}", e.getMessage(), e);
         }
     }
 }

@@ -63,13 +63,18 @@ public class RouteAnalysisController {
             @RequestParam(defaultValue = "3") int period,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        if (period != 3 && period != 6 && period != 12) {
-            return ResponseEntity.badRequest().build();
-        }
-        if (size < 1 || size > 50) {
+        if (!isValidPeriod(period) || !isValidSize(size)) {
             return ResponseEntity.badRequest().build();
         }
         return ResponseEntity.ok(safetyNewsService.getNewsAnalysis(searchCardId, userId, period, page, size));
+    }
+
+    private boolean isValidPeriod(int period) {
+        return period == 3 || period == 6 || period == 12;
+    }
+
+    private boolean isValidSize(int size) {
+        return size >= 1 && size <= 50;
     }
 
     /**
