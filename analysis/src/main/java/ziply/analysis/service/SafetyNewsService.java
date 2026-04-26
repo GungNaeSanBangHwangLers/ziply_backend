@@ -43,9 +43,13 @@ public class SafetyNewsService {
      * @param searchCardId 탐색카드 ID
      * @param userId       요청 사용자 ID (권한 확인)
      * @param period       조회 기간 (개월): 3, 6, 12
+     * @param level        뉴스 레벨 (1: 생활 불편, 2: 안전 불안, 3: 신변 위협)
+     * @param page         페이지 번호 (0-based)
+     * @param size         페이지당 항목 수
      */
     @Transactional(readOnly = true)
-    public List<SafetyNewsResponse> getNewsAnalysis(UUID searchCardId, Long userId, int period, int page, int size) {
+    public List<SafetyNewsResponse> getNewsAnalysis(UUID searchCardId, Long userId,
+                                                     int period, int level, int page, int size) {
         cardOwnershipValidator.validate(searchCardId, userId);
 
         List<HouseAnalysis> allData = routeAnalysisRepository.findBySearchCardId(searchCardId);
@@ -77,13 +81,14 @@ public class SafetyNewsService {
                         return buildEmptyResponse(label);
                     }
 
-                    return buildNewsResponse(label, regionName, period, since, page, size);
+                    return buildNewsResponse(label, regionName, period, since, level, page, size);
                 })
                 .collect(Collectors.toList());
     }
 
     private SafetyNewsResponse buildNewsResponse(String label, String regionName,
-                                                  int period, LocalDateTime since, int page, int size) {
+                                                  int period, LocalDateTime since,
+                                                  int level, int page, int size) {
         List<SafetyNews> allNews = safetyNewsRepository.findByRegionAndPeriod(regionName, since);
         int level1 = 0, level2 = 0, level3 = 0;
         for (SafetyNews n : allNews) {
@@ -96,18 +101,7 @@ public class SafetyNewsService {
         int total = level1 + level2 + level3;
 
         PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "publishedAt"));
-        Page<SafetyNews> newsPage = safetyNewsRepository.findByRegionAndPeriodPageable(regionName, since, pageable);
-
-        List<NewsItem> recent = newsPage.getContent().stream()
-                .map(n -> NewsItem.builder()
-                        .title(n.getTitle())
-                        .categoryLevel(LEVEL_NAME.getOrDefault(n.getCategoryLevel(), "알 수 없음"))
-                        .categoryTag(n.getCategoryTag())
-                        .publishedAt(n.getPublishedAt().toLocalDate())
-                        .contentUrl(n.getContentUrl())
-                        .summary(n.getSummary())
-                        .build())
-                .collect(Collectors.toList());
+        Page<SafetyNews> newsPage = safetyNewsRepository.findByRegionAndPeriodAndLevel(regionName, since, level, pageable);
 
         String message = buildMessage(regionName, period, level1, level2, level3, total);
 
@@ -118,12 +112,25 @@ public class SafetyNewsService {
                 .level2Count(level2)
                 .level3Count(level3)
                 .message(message)
-                .recentNews(recent)
+                .news(toNewsItems(newsPage))
                 .page(newsPage.getNumber())
                 .size(newsPage.getSize())
                 .totalCount(newsPage.getTotalElements())
                 .totalPages(newsPage.getTotalPages())
                 .build();
+    }
+
+    private List<NewsItem> toNewsItems(Page<SafetyNews> newsPage) {
+        return newsPage.getContent().stream()
+                .map(n -> NewsItem.builder()
+                        .title(n.getTitle())
+                        .categoryLevel(LEVEL_NAME.getOrDefault(n.getCategoryLevel(), "알 수 없음"))
+                        .categoryTag(n.getCategoryTag())
+                        .publishedAt(n.getPublishedAt().toLocalDate())
+                        .contentUrl(n.getContentUrl())
+                        .summary(n.getSummary())
+                        .build())
+                .collect(Collectors.toList());
     }
 
     private SafetyNewsResponse buildEmptyResponse(String label) {
@@ -132,7 +139,7 @@ public class SafetyNewsService {
                 .regionName(null)
                 .level1Count(0).level2Count(0).level3Count(0)
                 .message("이 집의 지역 정보를 확인할 수 없어 치안 뉴스를 불러오지 못했어요.")
-                .recentNews(Collections.emptyList())
+                .news(Collections.emptyList())
                 .page(0).size(0).totalCount(0).totalPages(0)
                 .build();
     }

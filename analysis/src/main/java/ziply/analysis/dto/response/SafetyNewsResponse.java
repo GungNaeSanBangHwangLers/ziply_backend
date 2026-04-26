@@ -8,8 +8,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /**
- * GET /api/v1/analysis/news/{searchCardId}?period=3&page=0&size=10 응답 DTO.
- * 탐색카드 내 각 집(houseId)의 동별 치안 뉴스 집계 결과 (페이지네이션 포함).
+ * GET /api/v1/analysis/news/{searchCardId}?period=3&level=2&page=0&size=10 응답 DTO.
+ * level 파라미터로 레벨별 뉴스를 독립적으로 조회.
+ * level 생략 시 카운트/메시지만 반환 (탭 배지용).
  */
 @Getter
 @Builder
@@ -26,12 +27,12 @@ public class SafetyNewsResponse {
 
     private String message;         // 요약 메시지
 
-    private List<NewsItem> recentNews;   // 페이지네이션된 기사 목록
+    private List<NewsItem> news;    // 요청한 레벨의 기사 목록
 
     private int page;               // 현재 페이지 (0-based)
     private int size;               // 페이지당 항목 수
-    private long totalCount;        // 전체 기사 수
-    private int totalPages;         // 전체 페이지 수
+    private long totalCount;        // 해당 레벨 전체 기사 수
+    private int totalPages;         // 해당 레벨 전체 페이지 수
 
     @Getter
     @Builder
@@ -40,7 +41,7 @@ public class SafetyNewsResponse {
     public static class NewsItem {
         private String title;
         private String categoryLevel;   // "생활 불편 / 무질서" | "안전 불안 / 재산 위협" | "신변 위협 / 강력 범죄"
-        private String categoryTag;     // 중분류 (예: "재산 범죄", "대인 강력") — 재분류 전 null
+        private String categoryTag;     // 중분류 (예: "재산 범죄", "대인 강력")
         private LocalDate publishedAt;
         private String contentUrl;
         private String summary;
