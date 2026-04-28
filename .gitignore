@@ -127,3 +127,13 @@ docker-volume/
 ### Tests ###
 *.test.js
 test-output/
+
+### Python ###
+__pycache__/
+*.pyc
+*.pyo
+
+### Snapshots & Archives ###
+*.snapshot
+*.tar
+*.tar.gz
