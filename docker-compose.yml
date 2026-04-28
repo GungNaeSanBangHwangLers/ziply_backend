@@ -51,6 +51,7 @@ services:
 
   # 2. 서비스 레이어
   user-service:
+    image: ${DOCKER_USERNAME}/user-service:latest
     build: ./user
     container_name: user-service
     restart: always
@@ -71,6 +72,7 @@ services:
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
 
   auth-service:
+    image: ${DOCKER_USERNAME}/auth-service:latest
     build: ./auth
     container_name: auth-service
     restart: always
@@ -88,6 +90,7 @@ services:
       - SPRING_DATASOURCE_PASSWORD=${MYSQL_ROOT_PASSWORD}
 
   review-service:
+    image: ${DOCKER_USERNAME}/review-service:latest
     build: ./review
     container_name: review-service
     restart: always
@@ -113,6 +116,7 @@ services:
       - KAKAO_API_KEY=${KAKAO_API_KEY}
 
   analysis-service:
+    image: ${DOCKER_USERNAME}/analysis-service:latest
     build: ./analysis
     container_name: analysis-service
     restart: always
@@ -149,6 +153,7 @@ services:
       - NAVER_CLIENT_SECRET=${NAVER_CLIENT_SECRET}
 
   gateway:
+    image: ${DOCKER_USERNAME}/gateway:latest
     build: ./gateway
     container_name: gateway
     ports:
