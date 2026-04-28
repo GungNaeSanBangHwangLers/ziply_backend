@@ -1,0 +1,62 @@
+spring:
+  kafka:
+    bootstrap-servers: kafka:29092
+    consumer:
+      group-id: ziply-analysis-group
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+
+  datasource:
+    url: jdbc:mysql://ziply-mysql:3306/ziply_analysis?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    username: root
+    password: ${MYSQL_ROOT_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+
+server:
+  port: 8080
+
+kakao:
+  api:
+    key: ${KAKAO_API_KEY}
+
+jwt:
+  secret: ${JWT_SECRET}
+
+bus:
+  api:
+    key: ${BUS_API_KEY}
+  location:
+    data:
+      path: /app/resources/seoulBusPosition.json.gz
+      path1: /app/resources/seoulBusCount.json
+
+seoul:
+  traffic:
+    api:
+      key: ${SEOUL_TRAFFIC_API_KEY}
+
+odsay:
+  api:
+    key: ${ODSAY_API_KEY}
+
+services:
+  review:
+    url: ${SERVICES_REVIEW_URL:http://review-service:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+  endpoint:
+    health:
+      show-details: always
+    prometheus:
+      enabled: true

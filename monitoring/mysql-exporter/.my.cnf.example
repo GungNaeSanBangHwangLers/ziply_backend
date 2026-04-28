@@ -1,0 +1,5 @@
+[client]
+user=root
+password=YOUR_MYSQL_PASSWORD
+host=ziply-mysql
+port=3306

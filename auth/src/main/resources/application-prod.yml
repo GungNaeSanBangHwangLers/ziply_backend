@@ -1,0 +1,46 @@
+spring:
+  application:
+    name: auth
+
+  datasource:
+    url: jdbc:mysql://ziply-mysql:3306/ziply_auth?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    username: root
+    password: ${MYSQL_ROOT_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+
+server:
+  port: 8080
+
+google:
+  android:
+    clientId: ${GOOGLE_ANDROID_CLIENT_ID:151591783378-d1vt407c2dbvjep2tnolnh3admqfh3t7.apps.googleusercontent.com}
+
+jwt:
+  secret: ${JWT_SECRET}
+  accessTokenValidityMs: 3600000
+  refreshTokenValidityMs: 1209600000
+
+services:
+  user:
+    base-url: http://user-service:8080
+    endpoint:
+      create-user: /api/v1/users
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+  endpoint:
+    health:
+      show-details: always
+    prometheus:
+      enabled: true
