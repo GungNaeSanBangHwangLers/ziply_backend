@@ -21,11 +21,12 @@ public class SafetyNewsResponse {
     private String label;           // A, B, C ...
     private String regionName;      // 법정동 이름 (예: 상도동)
 
+    private int period;              // 조회 기간 (개월 수)
+
     private int level1Count;        // 생활 불편
     private int level2Count;        // 안전 불안
     private int level3Count;        // 신변 위협
-
-    private String message;         // 요약 메시지
+    private int totalNewsCount;     // 전체 레벨 합산 건수 (level1+level2+level3)
 
     private List<NewsItem> news;    // 요청한 레벨의 기사 목록
 
