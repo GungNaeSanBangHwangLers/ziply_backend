@@ -103,15 +103,14 @@ public class SafetyNewsService {
         PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "publishedAt"));
         Page<SafetyNews> newsPage = safetyNewsRepository.findByRegionAndPeriodAndLevel(regionName, since, level, pageable);
 
-        String message = buildMessage(regionName, period, level1, level2, level3, total);
-
         return SafetyNewsResponse.builder()
                 .label(label)
                 .regionName(regionName)
+                .period(period)
                 .level1Count(level1)
                 .level2Count(level2)
                 .level3Count(level3)
-                .message(message)
+                .totalNewsCount(total)
                 .news(toNewsItems(newsPage))
                 .page(newsPage.getNumber())
                 .size(newsPage.getSize())
@@ -137,30 +136,10 @@ public class SafetyNewsService {
         return SafetyNewsResponse.builder()
                 .label(label)
                 .regionName(null)
-                .level1Count(0).level2Count(0).level3Count(0)
-                .message("이 집의 지역 정보를 확인할 수 없어 치안 뉴스를 불러오지 못했어요.")
+                .period(0)
+                .level1Count(0).level2Count(0).level3Count(0).totalNewsCount(0)
                 .news(Collections.emptyList())
                 .page(0).size(0).totalCount(0).totalPages(0)
                 .build();
-    }
-
-    private String buildMessage(String regionName, int period,
-                                int level1, int level2, int level3, int total) {
-        if (total == 0) {
-            return String.format("%s 인근에서 최근 %d개월간 수집된 치안 관련 뉴스가 없어요.", regionName, period);
-        }
-
-        StringBuilder sb = new StringBuilder();
-        sb.append(String.format("%s 인근에서 최근 %d개월간 치안 뉴스 %d건이 수집됐어요. ", regionName, period, total));
-
-        if (level3 > 0) {
-            sb.append(String.format("신변 위협 %d건이 포함되어 있으니 주의하세요.", level3));
-        } else if (level2 > 0) {
-            sb.append(String.format("안전 불안 %d건, 생활 불편 %d건이 보고됐어요.", level2, level1));
-        } else {
-            sb.append(String.format("생활 불편 %d건으로 비교적 안전한 편이에요.", level1));
-        }
-
-        return sb.toString();
     }
 }
