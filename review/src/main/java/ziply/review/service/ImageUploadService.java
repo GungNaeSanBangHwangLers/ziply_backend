@@ -3,9 +3,12 @@ package ziply.review.service;
 import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import net.coobird.thumbnailator.Thumbnails;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,8 +39,16 @@ public class ImageUploadService {
             String extension = originalName.substring(originalName.lastIndexOf("."));
             String fileName = UUID.randomUUID().toString() + extension;
 
+            // EXIF 회전 정보를 적용해 올바른 방향으로 보정 후 업로드
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            Thumbnails.of(file.getInputStream())
+                    .scale(1.0)
+                    .useExifOrientation(true)
+                    .toOutputStream(outputStream);
+            byte[] correctedBytes = outputStream.toByteArray();
+
             BlobClient blobClient = containerClient.getBlobClient(fileName);
-            blobClient.upload(file.getInputStream(), file.getSize(), true);
+            blobClient.upload(new ByteArrayInputStream(correctedBytes), correctedBytes.length, true);
 
             return blobClient.getBlobUrl();
 

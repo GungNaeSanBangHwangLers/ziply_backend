@@ -1,16 +1,23 @@
 package ziply.analysis.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import io.netty.channel.ChannelOption;
+import io.netty.handler.timeout.ReadTimeoutHandler;
+import io.netty.handler.timeout.WriteTimeoutHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.netty.http.client.HttpClient;
 import ziply.analysis.dto.response.KakaoRouteResponse;
 
 import java.time.DayOfWeek;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAdjusters;
+import java.util.concurrent.TimeUnit;
 
 @Component
 @Slf4j
@@ -23,7 +30,16 @@ public class KakaoRouteProvider {
     private static final String DIRECTION_ENDPOINT = "/v1/directions";
 
     public KakaoRouteProvider(WebClient.Builder webClientBuilder) {
-        this.webClient = webClientBuilder.baseUrl("https://apis-navi.kakaomobility.com").build();
+        HttpClient httpClient = HttpClient.create()
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5_000)
+                .doOnConnected(conn -> conn
+                        .addHandlerLast(new ReadTimeoutHandler(10, TimeUnit.SECONDS))
+                        .addHandlerLast(new WriteTimeoutHandler(10, TimeUnit.SECONDS)));
+
+        this.webClient = webClientBuilder
+                .baseUrl("https://apis-navi.kakaomobility.com")
+                .clientConnector(new ReactorClientHttpConnector(httpClient))
+                .build();
     }
 
     public record RouteResult(int durationSeconds, int distanceMeters) {
@@ -42,7 +58,9 @@ public class KakaoRouteProvider {
                             .queryParam("profile", "walking").build())
                     .header("Authorization", "KakaoAK " + kakaoRestApiKey)
                     .retrieve()
-                    .bodyToMono(KakaoRouteResponse.class).block();
+                    .bodyToMono(KakaoRouteResponse.class)
+                    .timeout(Duration.ofSeconds(15))
+                    .block();
 
             if (response == null || response.getRoutes() == null || response.getRoutes().isEmpty()) {
                 log.warn("카카오 도보 API: 경로를 찾을 수 없음. Origin={}, Dest={}", origin, destination);
